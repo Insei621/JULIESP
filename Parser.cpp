@@ -118,3 +118,24 @@ ASTNode* Parser::parseAtom(bool quoted) {
             return parseDefaultList(false);
     };
 };
+
+ASTNode* Parser::parseDefaultList(bool quoted) {
+    int l = showNext().line;
+    int c = showNext().cursor;
+
+    // 1. On crée le nœud. On passe 'quoted' au constructeur
+    // pour savoir si l'évaluateur doit traiter ça comme du code ou de la donnée.
+    SExpr* listNode = new SExpr(l, c, quoted);
+
+    // 2. Boucle de capture des éléments
+    while (showNext().type != TokenType::DEL_RBRACE) {
+        // Important : si la liste parente est 'quoted',
+        // les enfants devraient probablement l'être aussi par propagation.
+        listNode->add(parseElement(quoted));
+    }
+
+    // 3. Consommation du token de fermeture
+    expect(TokenType::DEL_RBRACE);
+
+    return listNode; // On retourne directement le pointeur
+}

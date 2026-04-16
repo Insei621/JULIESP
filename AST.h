@@ -12,8 +12,10 @@ public:
     ASTNode(std::string n, int l, int c, bool quoted = false)
         : name(std::move(n)), line(l), col(c), isQuoted(quoted) {}
     virtual ~ASTNode() = default;
-
     bool isQuotedNode() const { return isQuoted; }
+
+    virtual void accept(class Visitor* v) = 0;
+    const std::string& getName() const { return name; }
 
 protected:
     std::string name;
@@ -23,24 +25,23 @@ protected:
 };
 
 // --- LES ATOMES ---
-class Atom : public ASTNode {
-public:
-    using ASTNode::ASTNode; // Utilise le constructeur complet d'ASTNode
-};
+class Atom : public ASTNode { public: using ASTNode::ASTNode; }; // Utilise le constructeur complet d'ASTNode
 
 // --- LES SYMBOLES ---
-class Symbol : public Atom { public: using Atom::Atom; };
-class Primitive : public Symbol { public: using Symbol::Symbol; };
-class Identifier : public Symbol { public: using Symbol::Symbol; };
+class Symbol : public Atom { public: using Atom::Atom;};
+class Primitive : public Symbol { public: using Symbol::Symbol; void accept(Visitor* v) override;};
+class Identifier : public Symbol { public: using Symbol::Symbol; void accept(Visitor* v) override;};
 
 // --- LES LITTÉRAUX ---
-class Literal : public Atom { public: using Atom::Atom; };
+class Literal : public Atom { public: using Atom::Atom;};
 
 class IntegerLit : public Literal {
 public:
     int value;
     IntegerLit(int v, int l, int c, bool quoted = false)
         : Literal("INT", l, c, quoted), value(v) {}
+
+void accept(Visitor* v) override;
 };
 
 class FloatLit : public Literal {
@@ -48,6 +49,8 @@ public:
     float value;
     FloatLit(float v, int l, int c, bool quoted = false)
         : Literal("FLOAT", l, c, quoted), value(v) {}
+
+void accept(Visitor* v) override;
 };
 
 class CharLit : public Literal {
@@ -55,6 +58,8 @@ public:
     char value;
     CharLit(char v, int l, int c, bool quoted = false)
         : Literal("CHAR", l, c, quoted), value(v) {}
+
+void accept(Visitor* v) override;
 };
 
 class StringLit : public Literal {
@@ -62,6 +67,8 @@ public:
     std::string value;
     StringLit(std::string v, int l, int c, bool quoted = false)
         : Literal("STRING", l, c, quoted), value(std::move(v)) {}
+
+void accept(Visitor* v) override;
 };
 
 class BoolLit : public Literal {
@@ -69,6 +76,8 @@ public:
     bool value;
     BoolLit(bool v, int l, int c, bool quoted = false)
         : Literal("BOOL", l, c, quoted), value(v) {}
+
+void accept(Visitor* v) override;
 };
 
 // --- LES S-EXPRESSIONS ---
@@ -76,9 +85,11 @@ class SExpr : public ASTNode {
 public:
     SExpr(int l, int c, bool quoted = false)
         : ASTNode("SExpr", l, c, quoted) {}
-
     void add(ASTNode* node) { children.push_back(node); }
 
+    const std::vector<ASTNode*>& getChildren() const { return children; }
+
+void accept(Visitor* v) override;
 protected:
     std::vector<ASTNode*> children;
 };

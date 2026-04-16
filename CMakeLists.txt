@@ -11,4 +11,11 @@ add_executable(Compilateur_JULIESP main.cpp
         Parser.h
         AST.h
         Parser_SpecialForms.cpp
+        Visitor.cpp
+        Visitor.h
+        PrettyPrinter.cpp
+        PrettyPrinter.h
+        AST.cpp
+        parseArithmetic.cpp
+        parsePrimitiveCall.cpp
 )

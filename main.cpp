@@ -1,12 +1,13 @@
 
 #include "pch.h"
 #include "Lexer.h"
+#include "Parser.h"
+#include "PrettyPrinter.h"
 #include "tests_bench/Lexer_tb.hpp"
 
 #include <iostream>
 #include <cstring> // strcmp
 
-#include "Parser.h"
 
 
 int main(int argc, char** argv) {
@@ -26,6 +27,13 @@ int main(int argc, char** argv) {
 
     /// Analyse syntaxique et construction de l'AST
     Parser parser(tokens);
+    ASTNode* root = parser.parse();
+
+    /// Impression de l'AST avec le PrettyPrinter
+    PrettyPrinter printer;
+    root->accept(&printer);
+    std::cout << std::endl;
+
 
 
 }

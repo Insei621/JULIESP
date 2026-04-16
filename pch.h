@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <iomanip>
 #include <utility>
+#include <stdexcept>
 using namespace std;
 
 #ifndef COMPILATEUR_JULIESP_PCH_H

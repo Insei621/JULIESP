@@ -33,7 +33,7 @@ private:
     std::vector<Token> tokens;
     size_t current = 0;
 
-    // Méthodes de parsing récursif (exemples)
+    // Méthodes de parsing récursif
     ASTNode* parseElement(bool quoted = false);
     ASTNode* parseSExpr(bool quoted = false);
     ASTNode* parseAtom(bool quoted = false);
@@ -45,14 +45,19 @@ private:
     ASTNode* parseLambda();
     ASTNode* parseProgn();
     ASTNode* parseLoad();
+    ASTNode* parsePrint();
 
     // Primitives (dans Parser_Primitives.cpp)
+    void validateAriArgs(TokenType type, int count, int l, int c);
     ASTNode* parseArithmetic();
+    void validatePrimitiveArgs(TokenType type, int count, int l, int c, std::string name);
     ASTNode* parsePrimitiveCall();
 
     /** @brief Vérifie si on a parcouru tous les tokens */
     bool isAtEnd() const;
 };
+
+
 
 
 #endif //COMPILATEUR_JULIESP_PARSER_H
