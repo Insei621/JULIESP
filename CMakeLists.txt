@@ -9,6 +9,6 @@ add_executable(Compilateur_JULIESP main.cpp
         pch.h
         Parser.cpp
         Parser.h
-        AST.cpp
         AST.h
+        Parser_SpecialForms.cpp
 )

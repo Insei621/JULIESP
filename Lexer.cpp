@@ -124,6 +124,7 @@ const std::vector<Lexer::Rule> Lexer::rules = {
     { std::regex(R"(^:)"), TokenType::CORE_SETQ, false },
     { std::regex(R"(;^)"), TokenType::CORE_PROGN, false },
     { std::regex(R"(^\$)"), TokenType::CORE_LOAD, false },
+    { std::regex(R"(\€)"), TokenType::CORE_PRINT, false},
     { std::regex(R"(^&)"), TokenType::MAIN_CONS, false },
     { std::regex(R"(^\|)"), TokenType::MAIN_NULL, false },
     { std::regex(R"(^@)"), TokenType::MAIN_ATOM, false },

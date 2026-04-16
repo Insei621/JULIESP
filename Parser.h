@@ -5,11 +5,53 @@
 #ifndef COMPILATEUR_JULIESP_PARSER_H
 #define COMPILATEUR_JULIESP_PARSER_H
 
-#include  "pch.h"
+#include "pch.h"
+#include "AST.h"
 
 class Parser {
 public:
-    explicit Parser() = default;
+    // Constructeur : on passe le vecteur de tokens issus du Lexer
+    explicit Parser(std::vector<Token> t);
+
+    // --- Les 3 méthodes demandées ---
+
+    /** @brief Retourne le lexème courant sans avancer */
+    Token showNext() const;
+
+    /** @brief Consomme le lexème courant et avance à l'index suivant */
+    void acceptIt();
+
+    /** @brief Vérifie le type du lexème courant, l'accepte si valide, sinon erreur */
+    void expect(TokenType type);
+
+    // --- Point d'entrée principal du parsing ---
+    ASTNode* parse();
+
+    friend int main(int argc, char** argv);      // pour les test j'ai besoin d'accéder au fonction du parser dansa le main
+
+private:
+    std::vector<Token> tokens;
+    size_t current = 0;
+
+    // Méthodes de parsing récursif (exemples)
+    ASTNode* parseElement(bool quoted = false);
+    ASTNode* parseSExpr(bool quoted = false);
+    ASTNode* parseAtom(bool quoted = false);
+    ASTNode* parseDefaultList(bool quoted = false);
+
+    // Formes spéciales (dans Parser_SpecialForms.cpp)
+    ASTNode* parseIf();
+    ASTNode* parseSetq();
+    ASTNode* parseLambda();
+    ASTNode* parseProgn();
+    ASTNode* parseLoad();
+
+    // Primitives (dans Parser_Primitives.cpp)
+    ASTNode* parseArithmetic();
+    ASTNode* parsePrimitiveCall();
+
+    /** @brief Vérifie si on a parcouru tous les tokens */
+    bool isAtEnd() const;
 };
 
 

@@ -82,7 +82,7 @@ public:
 protected:
     std::vector<ASTNode*> children;
 };
-};
+
 
 
 #endif //COMPILATEUR_JULIESP_AST_H
