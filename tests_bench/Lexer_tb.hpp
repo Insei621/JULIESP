@@ -108,7 +108,7 @@ inline void run_test() {
 
     std::cout << "=============================\n";
 
-    std::cout << "Test du Parseur" << std::endl;
+    std::cout << "Test du Parseur" << std::flush;
     Parser parser(tokens);
     ASTNode* root = parser.parse();
 

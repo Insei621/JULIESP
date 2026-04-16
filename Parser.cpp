@@ -8,26 +8,43 @@
 Parser::Parser(std::vector<Token> t) : tokens(std::move(t)), current(0) {}
 
 ASTNode* Parser::parse() {
-    // 1. On récupère les coordonnées du début du fichier
-    int l = showNext().line;
-    int c = showNext().cursor;
+    SExpr* root = new SExpr(showNext().line, showNext().cursor, false);
 
-    // 2. Si ton langage supporte plusieurs expressions à la suite (top-level),
-    // on les regroupe souvent dans un nœud racine.
-    // Si tu ne veux parser qu'une seule expression, retire la boucle.
+    while (!isAtEnd() && showNext().type != TokenType::END_OF_FILE) {
+        std::cout << "DEBUG: Tentative sur le token " << showNext().value << std::endl; // AJOUTE ÇA
 
-    // Cas courant : on parse une seule expression complète
-    ASTNode* root = parseElement();
+        ASTNode* element = parseElement();
+        if (element) root->add(element);
+    }
+    return root;
+}
 
-    // 3. Optionnel : vérifier qu'on est bien à la fin du fichier (EOF)
-    // Cela évite d'ignorer du code mal formé à la fin
-    if (showNext().type != TokenType::END_OF_FILE) {
-        // Tu peux choisir de lever une erreur ou de boucler pour
-        // gérer plusieurs expressions.
+/*ASTNode* Parser::parse() {
+    // 1. On crée le conteneur racine
+    SExpr* root = new SExpr(showNext().line, showNext().cursor, false);
+
+    while (!isAtEnd() && showNext().type != TokenType::END_OF_FILE) {
+
+        // On sauvegarde l'index actuel pour vérifier si on avance
+        int lastIndex = current;
+
+        ASTNode* element = parseElement();
+
+        if (element != nullptr) {
+            root->add(element);
+        }
+
+        // --- SÉCURITÉ ANTI-BOUCLE ---
+        // Si l'index n'a pas bougé, c'est que parseElement a ignoré le token.
+        // On force l'avancement pour ne pas boucler à l'infini.
+        if (current == lastIndex) {
+            std::cerr << "[Parser Error] Stuck at token: " << showNext().value << std::endl;
+            acceptIt();
+        }
     }
 
     return root;
-}
+}*/
 
 /// --- 1.Logique de parsing
 // 1. Retourne le lexème courant sans avancer
@@ -68,14 +85,29 @@ bool Parser::isAtEnd() const {
 
 /// --- 2.Parsing
 ASTNode* Parser::parseSExpr(bool quoted) {
+    // 1. On consomme la parenthèse ouvrante
     expect(TokenType::DEL_LBRACE);
+
+    // 2. On crée le nœud
     SExpr* node = new SExpr(showNext().line, showNext().cursor, quoted);
 
-    while (showNext().type != TokenType::DEL_RBRACE && !isAtEnd()) {
-        // On propage le flag aux enfants de la liste
-        node->add(parseElement(quoted));
+    // 3. Tant qu'on n'a pas la fermeture
+    while (!isAtEnd() && showNext().type != TokenType::DEL_RBRACE) {
+        int lastIndex = current;
+        ASTNode* child = parseElement(quoted);
+
+        if (child) {
+            node->add(child);
+        }
+
+        // SÉCURITÉ : Si on n'a pas avancé, on force l'arrêt pour éviter le code 130
+        if (current == lastIndex) {
+            std::cerr << "ERREUR: Blocage sur " << showNext().value << std::endl;
+            acceptIt();
+        }
     }
 
+    // 4. On consomme la parenthèse fermante
     expect(TokenType::DEL_RBRACE);
     return node;
 }
@@ -163,7 +195,13 @@ ASTNode* Parser::parseAtom(bool quoted) {
             // --- CAS PAR DÉFAUT ---
             // Si c'est un IDENT (appel de fonction utilisateur) ou une autre SExpr
         default:
-            return parseDefaultList(false);
+            // Si on arrive ici et que ce n'est PAS une parenthèse fermante ou un EOF
+            // on risque la boucle infinie si on appelle parseDefaultList sans précaution.
+            if (t.type == TokenType::DEL_RBRACE || t.type == TokenType::END_OF_FILE) {
+                return nullptr;
+            }
+            // Si c'est un token vraiment inconnu, on lève une exception plutôt que de crasher
+            throw std::runtime_error("Erreur Syntaxique : Token inattendu '" + t.value + "'");
     };
 };
 
@@ -171,20 +209,19 @@ ASTNode* Parser::parseDefaultList(bool quoted) {
     int l = showNext().line;
     int c = showNext().cursor;
 
-    // 1. On crée le nœud. On passe 'quoted' au constructeur
-    // pour savoir si l'évaluateur doit traiter ça comme du code ou de la donnée.
     SExpr* listNode = new SExpr(l, c, quoted);
 
-    // 2. Boucle de capture des éléments
-    while (showNext().type != TokenType::DEL_RBRACE) {
-        // Important : si la liste parente est 'quoted',
-        // les enfants devraient probablement l'être aussi par propagation.
-        listNode->add(parseElement(quoted));
+    while (!isAtEnd() && showNext().type != TokenType::DEL_RBRACE) {
+        ASTNode* child = parseElement(quoted);
+        if (child != nullptr) {
+            listNode->add(child);
+        } else {
+            // Si parseElement n'a rien renvoyé, on doit sortir ou avancer
+            break;
+        }
     }
 
-    // 3. Consommation du token de fermeture
     expect(TokenType::DEL_RBRACE);
-
-    return listNode; // On retourne directement le pointeur
+    return listNode;
 }
 
