@@ -59,6 +59,11 @@ inline std::string tokenTypeToString(TokenType type) {
         case TokenType::MAIN_NULL:    return "MAIN_NULL";
         case TokenType::MAIN_ATOM:    return "MAIN_ATOM";
 
+            // --- À ajouter dans ton switch ---
+        case TokenType::LIT_STRING:   return "LIT_STRING";
+        case TokenType::LIT_CHAR:     return "LIT_CHAR";
+        case TokenType::CORE_PRINT:   return "CORE_PRINT"; // Pour le symbole €
+
         // --- Fin / erreur ---
         case TokenType::END_OF_FILE:  return "EOF";
         case TokenType::UNKNOWN:      return "UNKNOWN";
@@ -70,14 +75,15 @@ inline std::string tokenTypeToString(TokenType type) {
 /**
  * Fonction de test principale
  */
-inline void run_lexer_test() {
+inline void run_test() {
     std::string testCode = R"(
-    §§ commentaire de ligne
-    ( :x 12 3.14 + - * / < > = & | @ << >> ¤ £ ° μ ù ² )
-    §! commentaire de bloc
-    multiligne !§
-    foo bar 007 42. 42.0
-    )";
+         (setq x 42)
+            (if (< x 50)
+                (print "Petit")
+                (print "Grand")
+            )
+            (+ 1 2 (* 3 4))
+        )";
 
     std::cout << "=== Test du Lexer JulieSP ===\n";
 
@@ -101,6 +107,15 @@ inline void run_lexer_test() {
     }
 
     std::cout << "=============================\n";
+
+    std::cout << "Test du Parseur" << std::endl;
+    Parser parser(tokens);
+    ASTNode* root = parser.parse();
+
+    PrettyPrinter printer;
+    root->accept(&printer);
+    std::cout << std::endl;
+
 }
 
 #endif

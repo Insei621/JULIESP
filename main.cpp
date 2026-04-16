@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
     }
 
     if (std::strcmp(argv[1], "LEX_TEST") == 0) {
-        run_lexer_test();
+        run_test();
         return 0;
     }
 

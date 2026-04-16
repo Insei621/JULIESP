@@ -17,48 +17,34 @@ std::vector<Token> Lexer::tokenize() {
 
     while (!view.empty()) {
         bool matched = false;
-
         for (const auto& rule : rules) {
             std::cmatch match;
-
-            if (std::regex_search(
-                    view.begin(),
-                    view.end(),
-                    match,
-                    rule.pattern,
-                    std::regex_constants::match_continuous)) {
+            if (std::regex_search(view.begin(), view.end(), match, rule.pattern, std::regex_constants::match_continuous)) {
 
                 std::string lexeme = match.str();
+                std::string value = lexeme;
 
                 if (!rule.skip) {
-                    tokens.push_back({
-                        rule.type,
-                        lexeme,
-                        line,
-                        static_cast<int>(cursor)
-                    });
+                    // Nettoyage rapide (Strings et Chars)
+                    if ((rule.type == TokenType::LIT_STRING || rule.type == TokenType::LIT_CHAR) && value.size() >= 2) {
+                        value = value.substr(1, value.size() - 2);
+                    }
+
+                    tokens.push_back({rule.type, value, line, static_cast<int>(cursor)});
                 }
 
-                advance(lexeme);
+                advance(lexeme); // On avance TOUJOURS de la taille réelle du match
                 matched = true;
                 break;
-                    }
+            }
         }
 
         if (!matched) {
-            throw std::runtime_error(
-                "Lexical error near: \"" +
-                std::string(view.substr(0, 10)) + "\""
-            );
+            throw std::runtime_error("Lexical error near: \"" + std::string(view.substr(0, 10)) + "\"");
         }
     }
 
-    tokens.push_back({
-        TokenType::END_OF_FILE,
-        "",
-        line,
-        static_cast<int>(cursor)
-    });
+    tokens.push_back({TokenType::END_OF_FILE, "", line, static_cast<int>(cursor)});
     reporting_erreurs(tokens);
     return tokens;
 }
@@ -103,6 +89,10 @@ const std::vector<Lexer::Rule> Lexer::rules = {
     { std::regex(R"(^§§[^\n]*)"), TokenType::COM_LINE, true },
     { std::regex(R"(^§![\s\S]*?!§)"), TokenType::COM_BLOCK, true },
 
+    // --- Littéraux string et char
+        { std::regex(R"(^"([^"\\]|\\.)*")"), TokenType::LIT_STRING, false },
+        { std::regex(R"(^'([^'\\]|\\.)')"), TokenType::LIT_CHAR, false},
+
     // --- Délimiteurs ---
     { std::regex(R"(^\()"), TokenType::DEL_LBRACE, false },
     { std::regex(R"(^\))"), TokenType::DEL_RBRACE, false },
@@ -140,8 +130,6 @@ const std::vector<Lexer::Rule> Lexer::rules = {
     // --- Littéraux ---
     { std::regex(R"(^[0-9]+\.[0-9]+)"), TokenType::LIT_FLOAT, false },
     { std::regex(R"(^[0-9]+)"), TokenType::LIT_INT, false },
-    { std::regex(R"(^"([^"\\]|\\.)*")"), TokenType::LIT_STRING, false },
-    { std::regex(R"(^'([^'\\]|\\.)')"), TokenType::LIT_CHAR, false},
 
     // --- Identificateurs ---
     { std::regex(R"(^[A-Za-z]+)"), TokenType::IDENT, false },

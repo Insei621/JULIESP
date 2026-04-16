@@ -7,6 +7,28 @@
 
 Parser::Parser(std::vector<Token> t) : tokens(std::move(t)), current(0) {}
 
+ASTNode* Parser::parse() {
+    // 1. On récupère les coordonnées du début du fichier
+    int l = showNext().line;
+    int c = showNext().cursor;
+
+    // 2. Si ton langage supporte plusieurs expressions à la suite (top-level),
+    // on les regroupe souvent dans un nœud racine.
+    // Si tu ne veux parser qu'une seule expression, retire la boucle.
+
+    // Cas courant : on parse une seule expression complète
+    ASTNode* root = parseElement();
+
+    // 3. Optionnel : vérifier qu'on est bien à la fin du fichier (EOF)
+    // Cela évite d'ignorer du code mal formé à la fin
+    if (showNext().type != TokenType::END_OF_FILE) {
+        // Tu peux choisir de lever une erreur ou de boucler pour
+        // gérer plusieurs expressions.
+    }
+
+    return root;
+}
+
 /// --- 1.Logique de parsing
 // 1. Retourne le lexème courant sans avancer
 Token Parser::showNext() const {
@@ -79,6 +101,30 @@ ASTNode* Parser::parseAtom(bool quoted) {
     int l = t.line;
     int c = t.cursor;
 
+    // --- 1. GESTION DES VALEURS SIMPLES (Littéraux) ---
+    // Ces tokens NE SONT PAS des listes, on les retourne directement.
+
+    if (t.type == TokenType::LIT_INT) {
+        acceptIt();
+        return new IntegerLit(std::stoi(t.value), l, c, quoted);
+    }
+
+    if (t.type == TokenType::LIT_FLOAT) {
+        acceptIt();
+        return new FloatLit(std::stod(t.value), l, c, quoted);
+    }
+
+    if (t.type == TokenType::LIT_STRING) {
+        acceptIt(); // ON CONSOMME LE TOKEN
+        return new StringLit(t.value, l, c, quoted);
+    }
+
+    if (t.type == TokenType::IDENT) {
+        // Un identifiant seul (ex: une variable 'x') est un atome
+        acceptIt();
+        return new Identifier(t.value, l, c, quoted);
+    }
+
     switch (t.type) {
         // --- FORMES SPÉCIALES (CORE) ---
         case TokenType::CORE_IF:
@@ -91,6 +137,8 @@ ASTNode* Parser::parseAtom(bool quoted) {
             return parseProgn();
         case TokenType::CORE_LOAD:
             return parseLoad();
+        case TokenType::CORE_PRINT:
+            return parsePrint();
 
             // --- OPÉRATIONS ARITHMÉTIQUES ET LOGIQUES ---
         case TokenType::CALC_PLUS:
@@ -139,3 +187,4 @@ ASTNode* Parser::parseDefaultList(bool quoted) {
 
     return listNode; // On retourne directement le pointeur
 }
+
