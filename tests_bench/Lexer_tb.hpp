@@ -85,6 +85,9 @@ inline void run_test() {
             (+ 1 2 (* 3 4))
         )";
 
+    std::cout << "=== Code test ===\n";
+    std::cout << testCode << std::endl;
+
     std::cout << "=== Test du Lexer JulieSP ===\n";
 
     Lexer lexer(testCode);
@@ -108,10 +111,9 @@ inline void run_test() {
 
     std::cout << "=============================\n";
 
-    std::cout << "Test du Parseur" << std::flush;
+    std::cout << " === Test du Parseur ===" << std::flush;
     Parser parser(tokens);
     ASTNode* root = parser.parse();
-
     PrettyPrinter printer;
     root->accept(&printer);
     std::cout << std::endl;

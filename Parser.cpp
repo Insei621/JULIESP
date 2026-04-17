@@ -11,8 +11,7 @@ ASTNode* Parser::parse() {
     SExpr* root = new SExpr(showNext().line, showNext().cursor, false);
 
     while (!isAtEnd() && showNext().type != TokenType::END_OF_FILE) {
-        std::cout << "DEBUG: Tentative sur le token " << showNext().value << std::endl; // AJOUTE ÇA
-
+        //std::cout << "DEBUG: Tentative sur le token " << showNext().value << std::endl; // AJOUTE ÇA
         ASTNode* element = parseElement();
         if (element) root->add(element);
     }
@@ -85,46 +84,69 @@ bool Parser::isAtEnd() const {
 
 /// --- 2.Parsing
 ASTNode* Parser::parseSExpr(bool quoted) {
-    // 1. On consomme la parenthèse ouvrante
-    expect(TokenType::DEL_LBRACE);
+    expect(TokenType::DEL_LBRACE); // Consomme '('
 
-    // 2. On crée le nœud
-    SExpr* node = new SExpr(showNext().line, showNext().cursor, quoted);
+    // Cas de la liste vide ()
+    if (showNext().type == TokenType::DEL_RBRACE) {
+        int l = showNext().line;
+        int c = showNext().cursor;
+        expect(TokenType::DEL_RBRACE);
+        return new SExpr(l, c, quoted);
+    }
 
-    // 3. Tant qu'on n'a pas la fermeture
-    while (!isAtEnd() && showNext().type != TokenType::DEL_RBRACE) {
-        int lastIndex = current;
-        ASTNode* child = parseElement(quoted);
+    // Si on n'est pas dans un 'quote, on cherche les formes spéciales
+    if (!quoted) {
+        TokenType type = showNext().type;
+        switch (type) {
+            case TokenType::CORE_IF:     return parseIf();
+            case TokenType::CORE_SETQ:   return parseSetq();
+            case TokenType::CORE_LAMBDA: return parseLambda();
+            case TokenType::CORE_PROGN:  return parseProgn();
+            case TokenType::CORE_LOAD:   return parseLoad();
+            case TokenType::CORE_PRINT:  return parsePrint();
 
-        if (child) {
-            node->add(child);
-        }
+            case TokenType::CALC_PLUS:
+            case TokenType::CALC_MOINS:
+            case TokenType::CALC_MULT:
+            case TokenType::CALC_DIV:
+            case TokenType::CALC_INF:
+            case TokenType::CALC_SUP:
+            case TokenType::CALC_EQ:
+            case TokenType::CALC_ADREQ:
+            case TokenType::CALC_NUMBERQ:
+                return parseArithmetic();
 
-        // SÉCURITÉ : Si on n'a pas avancé, on force l'arrêt pour éviter le code 130
-        if (current == lastIndex) {
-            std::cerr << "ERREUR: Blocage sur " << showNext().value << std::endl;
-            acceptIt();
+            case TokenType::MAIN_CAR:
+            case TokenType::MAIN_CDR:
+            case TokenType::MAIN_CONS:
+            case TokenType::MAIN_NULL:
+            case TokenType::MAIN_ATOM:
+                return parsePrimitiveCall();
+
+            default:
+                break; // Sort du switch pour aller vers parseDefaultList
         }
     }
 
-    // 4. On consomme la parenthèse fermante
-    expect(TokenType::DEL_RBRACE);
-    return node;
+    // Si c'est un quote ou un appel de fonction standard (ex: (foo 1 2))
+    return parseDefaultList(quoted);
 }
 
 ASTNode* Parser::parseElement(bool quoted) {
     Token t = showNext();
 
+    // 1. Gestion du Quote (on propage l'état)
     if (t.type == TokenType::CORE_QUOTE) {
         acceptIt();
-        // Appel récursif : on propage le fait que l'élément suivant est quoté
         return parseElement(true);
     }
 
+    // 2. Si c'est une parenthèse, on délègue à parseSExpr
     if (t.type == TokenType::DEL_LBRACE) {
         return parseSExpr(quoted);
     }
 
+    // 3. Sinon, c'est obligatoirement un Atome (nombre, identifiant, etc.)
     return parseAtom(quoted);
 }
 
@@ -133,77 +155,17 @@ ASTNode* Parser::parseAtom(bool quoted) {
     int l = t.line;
     int c = t.cursor;
 
-    // --- 1. GESTION DES VALEURS SIMPLES (Littéraux) ---
-    // Ces tokens NE SONT PAS des listes, on les retourne directement.
+    // RÈGLE D'OR : On avance systématiquement avant de retourner l'atome
+    acceptIt();
 
-    if (t.type == TokenType::LIT_INT) {
-        acceptIt();
-        return new IntegerLit(std::stoi(t.value), l, c, quoted);
-    }
+    if (t.type == TokenType::LIT_INT)    return new IntegerLit(std::stoi(t.value), l, c, quoted);
+    if (t.type == TokenType::LIT_FLOAT)  return new FloatLit(std::stod(t.value), l, c, quoted);
+    if (t.type == TokenType::LIT_STRING) return new StringLit(t.value, l, c, quoted);
 
-    if (t.type == TokenType::LIT_FLOAT) {
-        acceptIt();
-        return new FloatLit(std::stod(t.value), l, c, quoted);
-    }
+    // Identifiants, symboles (+, -, if isolés), etc.
+    return new Identifier(t.value, l, c, quoted);
+}
 
-    if (t.type == TokenType::LIT_STRING) {
-        acceptIt(); // ON CONSOMME LE TOKEN
-        return new StringLit(t.value, l, c, quoted);
-    }
-
-    if (t.type == TokenType::IDENT) {
-        // Un identifiant seul (ex: une variable 'x') est un atome
-        acceptIt();
-        return new Identifier(t.value, l, c, quoted);
-    }
-
-    switch (t.type) {
-        // --- FORMES SPÉCIALES (CORE) ---
-        case TokenType::CORE_IF:
-            return parseIf();
-        case TokenType::CORE_SETQ:
-            return parseSetq();
-        case TokenType::CORE_LAMBDA:
-            return parseLambda();
-        case TokenType::CORE_PROGN:
-            return parseProgn();
-        case TokenType::CORE_LOAD:
-            return parseLoad();
-        case TokenType::CORE_PRINT:
-            return parsePrint();
-
-            // --- OPÉRATIONS ARITHMÉTIQUES ET LOGIQUES ---
-        case TokenType::CALC_PLUS:
-        case TokenType::CALC_MOINS:
-        case TokenType::CALC_MULT:
-        case TokenType::CALC_DIV:
-        case TokenType::CALC_INF:
-        case TokenType::CALC_SUP:
-        case TokenType::CALC_EQ:
-        case TokenType::CALC_ADREQ:
-        case TokenType::CALC_NUMBERQ:
-            return parseArithmetic();
-
-            // --- PRIMITIVES DE MANIPULATION (MAIN) ---
-        case TokenType::MAIN_CAR:
-        case TokenType::MAIN_CDR:
-        case TokenType::MAIN_CONS:
-        case TokenType::MAIN_NULL:
-        case TokenType::MAIN_ATOM:
-            return parsePrimitiveCall();
-
-            // --- CAS PAR DÉFAUT ---
-            // Si c'est un IDENT (appel de fonction utilisateur) ou une autre SExpr
-        default:
-            // Si on arrive ici et que ce n'est PAS une parenthèse fermante ou un EOF
-            // on risque la boucle infinie si on appelle parseDefaultList sans précaution.
-            if (t.type == TokenType::DEL_RBRACE || t.type == TokenType::END_OF_FILE) {
-                return nullptr;
-            }
-            // Si c'est un token vraiment inconnu, on lève une exception plutôt que de crasher
-            throw std::runtime_error("Erreur Syntaxique : Token inattendu '" + t.value + "'");
-    };
-};
 
 ASTNode* Parser::parseDefaultList(bool quoted) {
     int l = showNext().line;
