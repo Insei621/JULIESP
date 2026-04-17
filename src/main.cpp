@@ -6,6 +6,9 @@
 #include "../include/GraphvizVisitor.h"
 #include "../tests_bench/Lexer_tb.hpp"
 #include "../include/SemanticAnalyzer.h"
+#include "../include/IRGenerator.h"
+#include "../include/IROptmimizer.h"
+#include "../include/IRPrinter.h"
 
 #include <iostream>
 #include <cstring> // strcmp

@@ -9,6 +9,8 @@
 #include "../include/Lexer.h"
 #include "../include/pch.h"
 #include "../include/SemanticAnalyzer.h"
+#include "../include/IRGenerator.h"
+#include "../include/IRPrinter.h"
 
 /**
  * Affichage lisible des TokenType
@@ -86,6 +88,29 @@ inline void run_test() {
     SemanticAnalyzer semanticAnalyzer;
     semanticAnalyzer.analyze(root);
 
+    // Génération de l'IR
+    IRGenerator irGen;
+    IRModule module = irGen.generateModule(root);
+
+    // Optimisations (optionnel)
+    // IROptimizer opt;
+    // opt.optimize(module.mainCFG);
+    // ...
+
+    // Création du dossier de sortie
+    if (!fs::exists("CFG"))
+        fs::create_directory("CFG");
+
+    // Export console
+    IRPrinter::printModule(module);
+
+    // Export DOT (module complet avec toutes les fonctions)
+    IRPrinter::exportModuleToDot(module, "CFG/module.dot");
+    IRPrinter::generatePNG("CFG/module.dot", "CFG/module.png");
 }
+
+
+
+
 
 #endif

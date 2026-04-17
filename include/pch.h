@@ -19,6 +19,13 @@
 #include <cstdlib> // Pour system()
 #include <unordered_map>
 #include <fstream>
+#include <memory>
+#include <cassert>
+#include <set>
+#include <queue>
+#include <algorithm>
+#include <unordered_set>
+namespace fs = std::filesystem;
 using namespace std;
 
 #ifndef COMPILATEUR_JULIESP_PCH_H

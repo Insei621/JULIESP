@@ -1,0 +1,10 @@
+digraph Module {
+  compound=true;
+  node [shape=record, fontname="Courier New"];
+  subgraph cluster_main {
+    label="main";
+    entry1 [label="{entry1 | x = 10 | test_quote = lambda2 | %t1 = x + test_quote | %t2 = call &('quoted, ù) | %t3 = call &(%t1, %t2) | %t4 = call &(test, %t3) | ma_liste = %t4}"];
+    entry1 -> exit3;
+    exit3 [label="{exit3 | return 0}"];
+  }
+}
