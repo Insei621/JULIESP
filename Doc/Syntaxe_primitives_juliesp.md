@@ -12,7 +12,7 @@
 - car           -> <<
 - cdr           -> >>
 - cons          -> &
-- null (pour savoir quand s'arrêter) -> |
+- null (pour savoir si c'est vide) -> |
 - atom (pour vérifier si c'est une liste ou un atome) -> @
 
 # Le Calcul (Primitives Arithmétiques) :

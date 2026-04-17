@@ -3,19 +3,25 @@ project(Compilateur_JULIESP)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(Compilateur_JULIESP main.cpp
-        Lexer.cpp
-        Lexer.h
-        pch.h
-        Parser.cpp
-        Parser.h
-        AST.h
-        Parser_SpecialForms.cpp
-        Visitor.cpp
-        Visitor.h
-        PrettyPrinter.cpp
-        PrettyPrinter.h
-        AST.cpp
-        parseArithmetic.cpp
-        parsePrimitiveCall.cpp
+add_executable(Compilateur_JULIESP src/main.cpp
+        src/Lexer.cpp
+        include/Lexer.h
+        include/pch.h
+        src/Parser.cpp
+        include/Parser.h
+        include/AST.h
+        src/Parser_SpecialForms.cpp
+        src/Visitor.cpp
+        include/Visitor.h
+        src/PrettyPrinter.cpp
+        include/PrettyPrinter.h
+        src/AST.cpp
+        src/parseArithmetic.cpp
+        src/parsePrimitiveCall.cpp
+        src/GraphvizVisitor.cpp
+        include/GraphvizVisitor.h
+        src/SymbolTable.cpp
+        include/SymbolTable.h
+        src/SemanticAnalyzer.cpp
+        include/SemanticAnalyzer.h
 )

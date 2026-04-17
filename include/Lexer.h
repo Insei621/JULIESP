@@ -33,8 +33,8 @@ private:
     int line = 1;
 
     void advance(std::string_view matched);
-
     void reporting_erreurs(const std::vector<Token>& tokens) const;
+    void afficherTokens(const std::vector<Token>& tokens) const;
 };
 
 

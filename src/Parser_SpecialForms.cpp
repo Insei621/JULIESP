@@ -2,8 +2,8 @@
 // Created by kerya on 16/04/2026.
 //
 
-#include "pch.h"
-#include "Parser.h"
+#include "../include/pch.h"
+#include "../include/Parser.h"
 
 ASTNode* Parser::parseIf() {
     int l = showNext().line;
@@ -56,6 +56,8 @@ ASTNode* Parser::parseSetq() {
 
     // 4. Le deuxième argument est la valeur (une expression, un nombre, etc.)
     setqNode->add(parseElement());
+    // 5. On ferme la parenthèse
+    expect(TokenType::DEL_RBRACE);
 
     return setqNode;
 }
@@ -85,6 +87,9 @@ ASTNode* Parser::parseLambda() {
     // On attend une seule expression car en lisp il faut utiliser progn si on veux en exécuter plusieurs
     lambdaNode->add(parseElement());
 
+    // 5. On ferme la parenthèse
+    expect(TokenType::DEL_RBRACE);
+
     return lambdaNode;
 }
 
@@ -105,8 +110,12 @@ ASTNode* Parser::parseProgn() {
     while (showNext().type != TokenType::DEL_RBRACE) {
         prognNode->add(parseElement());
     }
+    // 5. On ferme la parenthèse
+    expect(TokenType::DEL_RBRACE);
 
     return prognNode;
+
+
 }
 
 ASTNode* Parser::parseLoad() {
@@ -129,6 +138,9 @@ ASTNode* Parser::parseLoad() {
         throw std::logic_error("l"+std::to_string(l)+",c"+std::to_string(c)+" The 'load' function expects a file path (string or identifier).");
     }
 
+    // 5. On ferme la parenthèse
+    expect(TokenType::DEL_RBRACE);
+
     return loadNode;
 }
 
@@ -149,6 +161,9 @@ ASTNode* Parser::parsePrint() {
     while (showNext().type != TokenType::DEL_RBRACE) {
         printNode->add(parseElement());
     }
+
+    // 5. On ferme la parenthèse
+    expect(TokenType::DEL_RBRACE);
 
     return printNode;
 }
@@ -178,13 +193,13 @@ ASTNode* Parser::parseScan() {
                                   " : 'scan' ne peut prendre qu'un seul argument.");
     }
 
-    // 5. Consomme la parenthèse/accolade fermante
-    expect(TokenType::DEL_RBRACE);
-
-    // 6. Construction du nœud AST
+    // 5. Construction du nœud AST
     SExpr* scanNode = new SExpr(l, c, false);
     scanNode->add(new Primitive("scan", l, c, false));
     scanNode->add(arg);
+
+    // 6. Consomme la parenthèse/accolade fermante
+    expect(TokenType::DEL_RBRACE);
 
     return scanNode;
 }

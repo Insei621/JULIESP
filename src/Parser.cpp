@@ -2,20 +2,34 @@
 // Created by keryan on 08/04/2026.
 //
 
-#include "Parser.h"
-#include "pch.h"
+#include "../include/Parser.h"
+#include "../include/pch.h"
 
 Parser::Parser(std::vector<Token> t) : tokens(std::move(t)), current(0) {}
 
 ASTNode* Parser::parse() {
-    SExpr* root = new SExpr(showNext().line, showNext().cursor, false);
+    std::cout << "\033[1;34m[Parsing]\033[0m Lancement de l'analyse..." << std::endl;
+    // On capture le premier token pour le nœud racine
+    Token first = showNext();
+    SExpr* root = new SExpr(first.line, first.cursor, false);
 
-    while (!isAtEnd() && showNext().type != TokenType::END_OF_FILE) {
-        //std::cout << "DEBUG: Tentative sur le token " << showNext().value << std::endl; // AJOUTE ÇA
-        ASTNode* element = parseElement();
-        if (element) root->add(element);
+    try {
+        int elementCount = 0;
+        while (!isAtEnd() && showNext().type != TokenType::END_OF_FILE) {
+            ASTNode* element = parseElement();
+            if (element) {
+                root->add(element);
+                elementCount++;
+            }
+        }
+
+        // Message de succès final
+        std::cout << "\033[1;32m[Succès]\033[0m Analyse syntaxique terminée (" << elementCount << " expressions)." << std::endl;
+        return root;
+
+    } catch (const std::exception& e) {
+        throw; // On relance l'erreur pour qu'elle soit attrapée plus haut
     }
-    return root;
 }
 
 /*ASTNode* Parser::parse() {
@@ -70,11 +84,11 @@ void Parser::expect(TokenType expectedType) {
         acceptIt();
     } else {
         // Le type est invalide : on lève une erreur détaillée
-        std::string message = "Erreur de syntaxe à la ligne " + std::to_string(actualToken.line) +
-                              " : attendu type " + std::to_string(static_cast<int>(expectedType)) +
-                              ", mais reçu " + std::to_string(static_cast<int>(actualToken.type));
+        std::string msg = "\033[1;31m[Erreur Syntaxique]\033[0m Ligne " + std::to_string(actualToken.line) +
+                                  " : attendu type " + std::to_string(static_cast<int>(expectedType)) +
+                                  " mais trouvé '" + actualToken.value + "'.";
 
-        throw std::runtime_error(message);
+        throw std::runtime_error(msg);
     }
 }
 
@@ -183,8 +197,6 @@ ASTNode* Parser::parseAtom(bool quoted) {
     // Identifiants, symboles (+, -, if isolés), etc.
     return new Identifier(t.value, l, c, quoted);
 }
-
-
 
 ASTNode* Parser::parseDefaultList(bool quoted) {
     int l = showNext().line;

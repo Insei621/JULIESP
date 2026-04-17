@@ -112,3 +112,88 @@
     ( ? µ ( € "Vrai" ) )  §§ IF sans ELSE
     ( € "Suite du code" )
 )
+
+§§ 1. Définition d'une variable globale
+( : multiplicateur_universel 10 )
+
+§§ 2. Définition d'une fonction avec £ (lambda) et ; (progn)
+( : calculer_score
+    ( £ (score_base)
+        ( ;
+            ( : bonus 50 )
+            ( : total ( + score_base bonus ) )
+            ( * total multiplicateur_universel )
+        )
+    )
+)
+
+§§ 3. Utilisation de structures de contrôle et d'affichage
+( ? ( > multiplicateur_universel 0 )
+    ( ;
+        ( € "Calcul en cours..." )
+        ( : resultat ( calculer_score 100 ) )
+        ( € "Le résultat final est prêt." )
+    )
+    ( € "Erreur : Constante universelle invalide." )
+)
+
+§§ Partie 3
+
+§§ Définition globale
+( : x 100 )
+
+( : tester_scopes
+    ( £ ( a )
+        ( ;
+            ( : b ( + a x ) )
+            ( € b )
+        )
+    )
+)
+
+§§ Appel de la fonction
+( tester_scopes 50 )
+
+§§ CE CI DOIT ÉCHOUER en sémantique si tu essaies d'accéder à 'b' ici :
+§§ ( € b )
+
+
+
+§§
+
+( : n 0 ) §§ Variable globale n
+
+( : factorielle
+    ( £ ( n ) §§ Ce 'n' local doit masquer le 'n' global
+        ( ? ( = n 0 )
+            1
+            ( * n ( factorielle ( - n 1 ) ) )
+        )
+    )
+)
+
+( : resultat ( factorielle 5 ) )
+( € "Factorielle de 5 est :" )
+( € resultat )
+
+
+§§ Création d'une liste complexe
+( : ma_liste ( & 10 ( & 20 ( & 30 ù ) ) ) )
+
+( : analyser_liste
+    ( £ ( l )
+        ( ;
+            ( ? ( | l ) §§ Test null?
+                ( € "Liste vide" )
+                ( ;
+                    ( € ( << l ) )   §§ Test car
+                    ( € ( @ ( << l ) ) ) §§ Test atom?
+                    ( : reste ( >> l ) )  §§ Test cdr
+                    ( € reste )
+                )
+            )
+        )
+    )
+)
+
+( analyser_liste ma_liste )

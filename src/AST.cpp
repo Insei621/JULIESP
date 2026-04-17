@@ -2,8 +2,8 @@
 // Created by kerya on 16/04/2026.
 //
 
-#include "AST.h"
-#include "Visitor.h"
+#include "../include/AST.h"
+#include "../include/Visitor.h"
 
 void IntegerLit::accept(Visitor* v) { v->visit(this); }
 void FloatLit::accept(Visitor* v)   { v->visit(this); }

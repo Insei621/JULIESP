@@ -2,11 +2,11 @@
 // Created by kerya on 16/04/2026.
 //
 
-#include "PrettyPrinter.h"
+#include "../include/PrettyPrinter.h"
 
 
-#include "pch.h"
-#include "PrettyPrinter.h"
+#include "../include/pch.h"
+#include "../include/PrettyPrinter.h"
 
 // Initialisation du constructeur (si nécessaire)
 PrettyPrinter::PrettyPrinter() : indentLevel(0) {}

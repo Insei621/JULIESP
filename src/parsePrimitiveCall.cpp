@@ -1,8 +1,8 @@
 //
 // Created by kerya on 16/04/2026.
 //
-#include "pch.h"
-#include "Parser.h"
+#include "../include/pch.h"
+#include "../include/Parser.h"
 
 
 ASTNode* Parser::parsePrimitiveCall() {

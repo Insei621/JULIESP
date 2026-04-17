@@ -4,8 +4,8 @@
 
 #include <complex>
 
-#include "pch.h"
-#include "Parser.h"
+#include "../include/pch.h"
+#include "../include/Parser.h"
 
 ASTNode* Parser::parseArithmetic() {
     Token opToken = showNext(); // On récupère le token actuel (+, -, numberq, etc.)

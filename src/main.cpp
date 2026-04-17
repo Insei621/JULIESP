@@ -1,9 +1,11 @@
 
-#include "pch.h"
-#include "Lexer.h"
-#include "Parser.h"
-#include "PrettyPrinter.h"
-#include "tests_bench/Lexer_tb.hpp"
+#include "../include/pch.h"
+#include "../include/Lexer.h"
+#include "../include/Parser.h"
+#include "../include/PrettyPrinter.h"
+#include "../include/GraphvizVisitor.h"
+#include "../tests_bench/Lexer_tb.hpp"
+#include "../include/SemanticAnalyzer.h"
 
 #include <iostream>
 #include <cstring> // strcmp
@@ -33,6 +35,23 @@ int main(int argc, char** argv) {
     PrettyPrinter printer;
     root->accept(&printer);
     std::cout << std::endl;
+
+    /// Impression du graphe de l'AST
+    std::ofstream dotFile("AST_Graphe/ast.dot");//Impression de l'AST dans un fichier pour pouvoir visualiser le graphique
+    dotFile << "digraph G {\n";
+    GraphvizVisitor gv(dotFile);
+    root->accept(&gv);
+    dotFile << "}\n";
+    dotFile.close();
+    system("dot -Tpng AST_Graphe/ast.dot -o AST_Graphe/ast.png");
+
+    /// Analyse Sémantique
+    SemanticAnalyzer SemanticAnalyzer;
+
+
+
+    return 0;
+
 
 
 
