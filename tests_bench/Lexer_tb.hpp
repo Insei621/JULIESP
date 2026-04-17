@@ -14,27 +14,43 @@
  * Affichage lisible des TokenType
  */
 std::string testCode = R"(
+§!
+   Ce test vérifie si ton analyseur sémantique est "piégé"
+   par le symbole ² (quote).
+!§
 
-§§ Création d'une liste complexe
-( : ma_liste ( & 10 ( & 20 ( & 30 ù ) ) ) )
+( : x 10 )
 
-( : analyser_liste
+( : test_quote
     ( £ ( l )
         ( ;
-            ( ? ( | l ) §§ Test null?
-                ( € "Liste vide" )
+            ( : y ²x ) §§ Ici, y ne vaut pas 10, il vaut le SYMBOLE x.
+            ( : z ²( + 1 2 ) ) §§ Ici, z ne vaut pas 3, il vaut la LISTE (+ 1 2).
+
+            ( € "La variable x vaut :" )
+            ( € x )
+
+            ( € "Le symbole cité y est :" )
+            ( € y )
+
+            §§ Test de shadowing avec quote
+            ( £ ( x )
                 ( ;
-                    ( € ( << l ) )   §§ Test car
-                    ( € ( @ ( << l ) ) ) §§ Test atom?
-                    ( : reste ( >> l ) )  §§ Test cdr
-                    ( € reste )
+                    ( : x 50 )
+                    ( € "Ici x local vaut :" )
+                    ( € x )
+                    ( € "Mais ²x reste le symbole :" )
+                    ( € ²x )
                 )
             )
         )
     )
 )
 
-( analyser_liste ma_liste )
+§§ Une liste qui contient des calculs et des quotes
+( : ma_liste ( & ²test ( & ( + 5 5 ) ( & ²( << ( 1 2 ) ) ù ) ) ) )
+
+( test_quote ma_liste )
         )";
 
 

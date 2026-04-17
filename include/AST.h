@@ -16,6 +16,8 @@ public:
 
     virtual void accept(class Visitor* v) = 0;
     const std::string& getName() const { return name; }
+    int getLine() const { return line; }
+    int getColumn() const { return col; }
 
 protected:
     std::string name;
