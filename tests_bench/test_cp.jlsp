@@ -69,3 +69,46 @@
 ( € ( @ ( << complexe ) ) )
 
 ( : x 0.0001 ) §§ Test des petits décimaux
+
+
+§§ Partie 2
+
+§§ Test de l'addition et multiplication à n-arguments
+( : gros_calcul ( + 1 2 3 4 5 6 7 8 9 ) )
+( : poly ( + ( * 2 5 10 ) ( * 3 3 ) 1 ) ) §§ 100 + 9 + 1 = 110
+
+§§ Test du Progn (;) avec beaucoup d'étapes
+( ;
+    ( : y 10 )
+    ( : y ( + y 1 ) )
+    ( : y ( * y 2 ) )
+    ( € "Valeur finale de y :" y )
+)
+
+§§ Une liste qui contient une autre liste quotée
+( : meta ²( 1 ²( a b ) 3 ) )
+
+§§ Quoter une fonction pour la traiter comme de la donnée
+( : commande ²( + 1 2 ) )
+( : imbrication_quote ²( ²( ²( a ) ) ) )
+
+( : calcul_fou
+    ( ? ( > ( + 1 ( * 2 3 ) ) 5 )
+        ( & ²resultat ( £ ( x y ) ( + x y ( * x y ) ) ) )
+        ( ; ( € "Erreur" ) ù )
+    )
+)
+
+§§ Listes vides dans des listes
+( : vide ( & ( ) ( & ( ) ( ) ) ) )
+
+§§ Symboles qui ressemblent à des opérateurs mais sont des identifiants
+§§ Choix technique pour ce test: en lisp c'est possible mais dans juliesp on dira que non
+( : +++ 10 )
+( : -_- "Humeur" )
+( + +++ 5 )
+
+( ;
+    ( ? µ ( € "Vrai" ) )  §§ IF sans ELSE
+    ( € "Suite du code" )
+)

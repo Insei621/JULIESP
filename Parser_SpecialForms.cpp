@@ -9,28 +9,26 @@ ASTNode* Parser::parseIf() {
     int l = showNext().line;
     int c = showNext().cursor;
 
+    // On ne consomme pas le '?' ici si parseSExpr l'a déjà fait ?
+    // Attention : si ton switch dans parseSExpr n'a pas fait acceptIt(),
+    // alors ton expect(TokenType::CORE_IF) est correct.
     expect(TokenType::CORE_IF);
 
-    // 1. Création du nœud parent
     SExpr* ifNode = new SExpr(l, c, false);
+    ifNode->add(new Primitive("?", l, c, false));
 
-    // 2. On ajoute le symbole 'if' et on avance
-    ifNode->add(new Primitive("if", l, c, false));
+    ifNode->add(parseElement()); // Condition
+    ifNode->add(parseElement()); // Then
 
-    // 3. La CONDITION est obligatoire
-    ifNode->add(parseElement());
-
-    // 4. Le bloc THEN est obligatoire
-    ifNode->add(parseElement());
-
-    // 5. Le bloc ELSE est facultatif
     if (showNext().type != TokenType::DEL_RBRACE) {
-        // S'il reste quelque chose avant la fermeture, c'est le else
-        ifNode->add(parseElement());
+        ifNode->add(parseElement()); // Else
     } else {
-        // on ajoute un nœud "Null" pour laisser la liste à 3 éléments
         ifNode->add(new Identifier("nil", l, c, false));
     }
+
+    // --- LA CORRECTION EST ICI ---
+    expect(TokenType::DEL_RBRACE); // On ferme le bloc IF !
+    // -----------------------------
 
     return ifNode;
 }

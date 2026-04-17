@@ -77,17 +77,10 @@ inline std::string tokenTypeToString(TokenType type) {
  */
 inline void run_test() {
     std::string testCode = R"(
-§!
-   Ce bloc test les commentaires multi-lignes
-   ainsi que les structures très profondes.
-!§
-
-( : complexe ( & ( + 1 2 ) ( & ( ? µ 42 0 ) ²( a b ( c d ) ) ) ) )
-
-§§ Test des symboles isolés dans une liste
-( € ( @ ( << complexe ) ) )
-
-( : x 0.0001 ) §§ Test des petits décimaux
+§§ Symboles qui ressemblent à des opérateurs mais sont des identifiants
+( : +++ 10 )
+( : -_- "Humeur" )
+( + +++ 5 )
         )";
 
     std::cout << "=== Code test ===\n";

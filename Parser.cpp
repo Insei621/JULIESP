@@ -135,6 +135,23 @@ ASTNode* Parser::parseSExpr(bool quoted) {
 ASTNode* Parser::parseElement(bool quoted) {
     Token t = showNext();
 
+    if (t.type == TokenType::CORE_QUOTE) {
+        acceptIt(); // 1. On "consomme" le ² (il disparaît du flux)
+        // 2. On rappelle parseElement EN FORÇANT le booléen à true
+        return parseElement(true);
+    }
+
+    if (t.type == TokenType::DEL_LBRACE) {
+        return parseSExpr(quoted); // Transmet le "pinceau" à la liste
+    }
+
+    return parseAtom(quoted); // Transmet le "pinceau" à l'atome
+}
+
+/*
+ASTNode* Parser::parseElement(bool quoted) {
+    Token t = showNext();
+
     // 1. Gestion du Quote (on propage l'état)
     if (t.type == TokenType::CORE_QUOTE) {
         acceptIt();
@@ -149,6 +166,7 @@ ASTNode* Parser::parseElement(bool quoted) {
     // 3. Sinon, c'est obligatoirement un Atome (nombre, identifiant, etc.)
     return parseAtom(quoted);
 }
+*/
 
 ASTNode* Parser::parseAtom(bool quoted) {
     Token t = showNext();
@@ -165,6 +183,7 @@ ASTNode* Parser::parseAtom(bool quoted) {
     // Identifiants, symboles (+, -, if isolés), etc.
     return new Identifier(t.value, l, c, quoted);
 }
+
 
 
 ASTNode* Parser::parseDefaultList(bool quoted) {

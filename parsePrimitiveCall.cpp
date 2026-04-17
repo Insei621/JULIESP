@@ -4,6 +4,38 @@
 #include "pch.h"
 #include "Parser.h"
 
+
+ASTNode* Parser::parsePrimitiveCall() {
+    Token opToken = showNext();
+    int l = opToken.line;
+    int c = opToken.cursor;
+    TokenType type = opToken.type;
+
+    // On crée la SExpr qui représente l'appel (ex: (cons ...))
+    SExpr* primNode = new SExpr(l, c, false);
+
+    // 1. Ajout de la primitive elle-même (le nom de la fonction)
+    primNode->add(new Primitive(opToken.value, l, c, false));
+    acceptIt();
+
+    // 2. Parsage des arguments
+    int argCount = 0;
+    while (showNext().type != TokenType::DEL_RBRACE) {
+        // IMPORTANT : parseElement va gérer le '²' et renvoyer UN SEUL bloc
+        // même si c'est une liste complexe.
+        primNode->add(parseElement(false));
+        argCount++;
+    }
+
+    // 3. Validation
+    // Vérifie bien dans validatePrimitiveArgs que pour MAIN_CONS (&), tu attends argCount == 2
+    validatePrimitiveArgs(type, argCount, l, c, opToken.value);
+
+    expect(TokenType::DEL_RBRACE);
+    return primNode;
+}
+
+/*
 ASTNode* Parser::parsePrimitiveCall() {
     Token opToken = showNext();
     int l = opToken.line;
@@ -29,6 +61,7 @@ ASTNode* Parser::parsePrimitiveCall() {
     expect(TokenType::DEL_RBRACE);
     return primNode;
 }
+*/
 
 void Parser::validatePrimitiveArgs(TokenType type, int count, int l, int c, std::string name) {
     switch (type) {
