@@ -1,0 +1,71 @@
+§§ Test 1
+(setq x 42)
+    (if (< x 50)
+        (print "Petit")
+        (print "Grand")
+    )
+    (+ 1 2 (* 3 4))
+
+§§ Déclaration simple et calcul imbriqué
+( : a 10 )
+( : b ( + a ( * 5 2.5 ) ) )
+
+§§ Utilisation de littéraux différents
+( : message "Resultat:" )
+( € message b )
+
+§§ Test du IF et des booléens
+( : est_majeur µ )
+
+( ? ( > a 18 )
+    ( € "Acces autorise" )
+    ( € "Acces refuse" ) )
+
+§§ Vérification de type et d'égalité
+( : est_un_nombre ( ° a ) )
+( : sont_identiques ( ¤ a 10 ) )
+
+§§ Création d'une liste avec cons (&)
+( : ma_liste ( & 1 ( & 2 ( & 3 ù ) ) ) )
+
+§§ Test du Quote pour éviter l'évaluation
+( : liste_statique ²( 10 20 30 ) )
+
+§§ Accès aux éléments
+( : premier ( << ma_liste ) )
+( : reste ( >> ma_liste ) )
+
+§§ Vérification de liste vide
+( ? ( | reste )
+    ( € "Fin de liste" )
+    ( € "Il en reste encore" ) )
+
+§§ Définition d'une fonction anonyme
+( : au_carre ( £ ( n ) ( * n n ) ) )
+
+§§ Test du Progn (exécution séquentielle)
+( ;
+    ( € "Calcul en cours..." )
+    ( : resultat ( au_carre 8 ) )
+    ( € "Le carre de 8 est :" resultat )
+)
+
+( € "Veuillez entrer votre nom :" )
+( : nom ( ç "Utilisateur" ) )
+
+( € "Bonjour " nom )
+
+§§ Chargement d'un module externe
+( $ "math_library.jsp" )
+
+§!
+   Ce bloc test les commentaires multi-lignes
+   ainsi que les structures très profondes.
+!§
+
+( : complexe ( & ( + 1 2 ) ( & ( ? µ 42 0 ) ²( a b ( c d ) ) ) ) )
+
+§§ Test des symboles isolés dans une liste
+( € ( @ ( << complexe ) ) )
+
+( : x 0.0001 ) §§ Test des petits décimaux

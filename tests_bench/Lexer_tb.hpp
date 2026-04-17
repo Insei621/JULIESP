@@ -77,12 +77,17 @@ inline std::string tokenTypeToString(TokenType type) {
  */
 inline void run_test() {
     std::string testCode = R"(
-         (setq x 42)
-            (if (< x 50)
-                (print "Petit")
-                (print "Grand")
-            )
-            (+ 1 2 (* 3 4))
+§!
+   Ce bloc test les commentaires multi-lignes
+   ainsi que les structures très profondes.
+!§
+
+( : complexe ( & ( + 1 2 ) ( & ( ? µ 42 0 ) ²( a b ( c d ) ) ) ) )
+
+§§ Test des symboles isolés dans une liste
+( € ( @ ( << complexe ) ) )
+
+( : x 0.0001 ) §§ Test des petits décimaux
         )";
 
     std::cout << "=== Code test ===\n";
@@ -109,9 +114,7 @@ inline void run_test() {
                   << t.cursor << '\n';
     }
 
-    std::cout << "=============================\n";
-
-    std::cout << " === Test du Parseur ===" << std::flush;
+    std::cout << " === Test du Parseur ===" <<std::endl<<std::flush;
     Parser parser(tokens);
     ASTNode* root = parser.parse();
     PrettyPrinter printer;

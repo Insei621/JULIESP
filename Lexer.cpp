@@ -82,58 +82,59 @@ void Lexer::reporting_erreurs(const std::vector<Token>& tokens) const {
 }
 
 const std::vector<Lexer::Rule> Lexer::rules = {
-    // --- Espaces ---
+// --- Espaces ---
     { std::regex(R"(^[ \t\r\n]+)"), TokenType::DEL_SPACE, true },
 
     // --- Commentaires ---
     { std::regex(R"(^§§[^\n]*)"), TokenType::COM_LINE, true },
     { std::regex(R"(^§![\s\S]*?!§)"), TokenType::COM_BLOCK, true },
 
-    // --- Littéraux string et char
-        { std::regex(R"(^"([^"\\]|\\.)*")"), TokenType::LIT_STRING, false },
-        { std::regex(R"(^'([^'\\]|\\.)')"), TokenType::LIT_CHAR, false},
+    // --- Littéraux string et char ---
+    { std::regex(R"(^"([^"\\]|\\.)*")"), TokenType::LIT_STRING, false },
+    { std::regex(R"(^'([^'\\]|\\.)')"), TokenType::LIT_CHAR, false},
 
     // --- Délimiteurs ---
     { std::regex(R"(^\()"), TokenType::DEL_LBRACE, false },
     { std::regex(R"(^\))"), TokenType::DEL_RBRACE, false },
 
-    // --- Symboles doubles ---
-    { std::regex(R"(^(<<))"), TokenType::MAIN_CAR, false },
-    { std::regex(R"(^(>>))"), TokenType::MAIN_CDR, false },
+    // --- Symboles doubles (AVANT les symboles simples) ---
+    { std::regex(R"(^<<)"), TokenType::MAIN_CAR, false },
+    { std::regex(R"(^>>)"), TokenType::MAIN_CDR, false },
 
-    // --- Symboles UTF-8 ---
-    { std::regex(R"(^¤)"), TokenType::CALC_ADREQ, false },
-    { std::regex(R"(^£)"), TokenType::CORE_LAMBDA, false },
-    { std::regex(R"(^°)"), TokenType::CALC_NUMBERQ, false },
-    { std::regex(R"(^μ)"), TokenType::BOOL_TRUE, false },
-    { std::regex(R"(^ù)"), TokenType::BOOL_FALSE, false },
-    { std::regex(R"(^²)"), TokenType::CORE_QUOTE, false },
+    // --- Symboles UTF-8 (Bien ancrés avec ^) ---
+    { std::regex(R"(^[μµ])"),          TokenType::BOOL_TRUE, false }, // Gère les deux types de mu/micro
+    { std::regex(R"(^ù)"),             TokenType::BOOL_FALSE, false },
+    { std::regex(R"(^²)"),             TokenType::CORE_QUOTE, false },
+    { std::regex(R"(^€)"),             TokenType::CORE_PRINT, false}, // Corrigé : ^€
+    { std::regex(R"(^ç)"),             TokenType::CORE_SCAN, false},  // Corrigé : ^ç
+    { std::regex(R"(^£)"),             TokenType::CORE_LAMBDA, false },
+    { std::regex(R"(^¤)"),             TokenType::CALC_ADREQ, false },
+    { std::regex(R"(^°)"),             TokenType::CALC_NUMBERQ, false },
 
     // --- Symboles simples ---
-    { std::regex(R"(^\?)"), TokenType::CORE_IF, false },
-    { std::regex(R"(^:)"), TokenType::CORE_SETQ, false },
-    { std::regex(R"(;^)"), TokenType::CORE_PROGN, false },
-    { std::regex(R"(^\$)"), TokenType::CORE_LOAD, false },
-    { std::regex(R"(\€)"), TokenType::CORE_PRINT, false},
-    { std::regex(R"(^&)"), TokenType::MAIN_CONS, false },
-    { std::regex(R"(^\|)"), TokenType::MAIN_NULL, false },
-    { std::regex(R"(^@)"), TokenType::MAIN_ATOM, false },
+    { std::regex(R"(^\?)"),            TokenType::CORE_IF, false },
+    { std::regex(R"(^:)"),             TokenType::CORE_SETQ, false },
+    { std::regex(R"(^;)"),             TokenType::CORE_PROGN, false }, // Corrigé : ^;
+    { std::regex(R"(^\$)"),            TokenType::CORE_LOAD, false },
+    { std::regex(R"(^&)"),             TokenType::MAIN_CONS, false },
+    { std::regex(R"(^\|)"),            TokenType::MAIN_NULL, false },
+    { std::regex(R"(^@)"),             TokenType::MAIN_ATOM, false },
 
-    { std::regex(R"(^\+)"), TokenType::CALC_PLUS, false },
-    { std::regex(R"(^-)"), TokenType::CALC_MOINS, false },
-    { std::regex(R"(^\*)"), TokenType::CALC_MULT, false },
-    { std::regex(R"(^/)"), TokenType::CALC_DIV, false },
-    { std::regex(R"(^<)"), TokenType::CALC_INF, false },
-    { std::regex(R"(^>)"), TokenType::CALC_SUP, false },
-    { std::regex(R"(^=)"), TokenType::CALC_EQ, false },
+    { std::regex(R"(^\+)"),            TokenType::CALC_PLUS, false },
+    { std::regex(R"(^-)"),             TokenType::CALC_MOINS, false },
+    { std::regex(R"(^\*)"),            TokenType::CALC_MULT, false },
+    { std::regex(R"(^/)"),             TokenType::CALC_DIV, false },
+    { std::regex(R"(^<)"),             TokenType::CALC_INF, false },
+    { std::regex(R"(^>)"),             TokenType::CALC_SUP, false },
+    { std::regex(R"(^=)"),             TokenType::CALC_EQ, false },
 
-    // --- Littéraux ---
+    // --- Littéraux numériques (Float avant Int !) ---
     { std::regex(R"(^[0-9]+\.[0-9]+)"), TokenType::LIT_FLOAT, false },
-    { std::regex(R"(^[0-9]+)"), TokenType::LIT_INT, false },
+    { std::regex(R"(^[0-9]+)"),         TokenType::LIT_INT, false },
 
     // --- Identificateurs ---
-    { std::regex(R"(^[A-Za-z]+)"), TokenType::IDENT, false },
+    { std::regex(R"(^[A-Za-z_][A-Za-z0-9_]*)"), TokenType::IDENT, false }, // Ajout de _ et chiffres
 
-    // --- Caractère inatendu ---
-    {std::regex(R"(.)"), TokenType::UNKNOWN, false}
+    // --- Caractère inatendu (A la toute fin !) ---
+    { std::regex(R"(^.)"),              TokenType::UNKNOWN, false} // ^. pour ne pas tout manger d'un coup
 };

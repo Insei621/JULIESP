@@ -46,6 +46,7 @@ private:
     ASTNode* parseProgn();
     ASTNode* parseLoad();
     ASTNode* parsePrint();
+    ASTNode* parseScan();
 
     // Primitives (dans Parser_Primitives.cpp)
     void validateAriArgs(TokenType type, int count, int l, int c);

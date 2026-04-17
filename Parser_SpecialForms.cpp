@@ -154,3 +154,39 @@ ASTNode* Parser::parsePrint() {
 
     return printNode;
 }
+
+ASTNode* Parser::parseScan() {
+    int l = showNext().line;
+    int c = showNext().cursor;
+
+    // 1. Consomme le mot-clé 'scan'
+    expect(TokenType::CORE_SCAN);
+
+    // 2. On parse exactement UN élément
+    ASTNode* arg = parseElement();
+
+    // 3. Vérification : l'argument est-il un littéral ?
+    // On vérifie si le nœud n'est ni une SExpr, ni un Identifier.
+    // (Ou on vérifie explicitement s'il appartient à tes classes de littéraux)
+    if (dynamic_cast<SExpr*>(arg) || dynamic_cast<Identifier*>(arg)) {
+        throw std::runtime_error("Erreur ligne " + std::to_string(l) +
+                                 " : 'scan' attend un littéral (String, Int, ou Float) en argument.");
+    }
+
+    // 4. On s'assure qu'il n'y a pas d'autres arguments avant la fermeture
+    // Si le token suivant n'est pas '}', c'est qu'il y a trop d'arguments.
+    if (showNext().type != TokenType::DEL_RBRACE) {
+        throw std::runtime_error("Erreur ligne " + std::to_string(l) +
+                                  " : 'scan' ne peut prendre qu'un seul argument.");
+    }
+
+    // 5. Consomme la parenthèse/accolade fermante
+    expect(TokenType::DEL_RBRACE);
+
+    // 6. Construction du nœud AST
+    SExpr* scanNode = new SExpr(l, c, false);
+    scanNode->add(new Primitive("scan", l, c, false));
+    scanNode->add(arg);
+
+    return scanNode;
+}
