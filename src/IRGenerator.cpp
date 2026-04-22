@@ -1,0 +1,612 @@
+//
+// IRGenerator.cpp — Implémentation du visiteur de génération d'IR
+//
+
+#include "../include/pch.h"
+#include "../include/IRGenerator.h"
+
+
+// =============================================================================
+// Constructeur & point d'entrée
+// =============================================================================
+
+IRGenerator::IRGenerator()
+    : currentBlock_(&program_.mainBlock)
+    , tempCounter_(0)
+    , labelCounter_(0)
+    , funcCounter_(0)
+{}
+
+IRProgram IRGenerator::generate(ASTNode* root) {
+    program_      = IRProgram{};
+    currentBlock_ = &program_.mainBlock;
+    tempCounter_  = 0;
+    labelCounter_ = 0;
+    funcCounter_  = 0;
+    lastResult_   = "";
+    typeTable_.clear();
+
+    // La racine est une SExpr "conteneur" — on visite chaque enfant directement
+    if (auto* rootExpr = dynamic_cast<SExpr*>(root)) {
+        for (ASTNode* child : rootExpr->getChildren()) {
+            child->accept(this);
+        }
+    } else {
+        root->accept(this); // fallback si ce n'est pas une SExpr
+    }
+
+    return program_;
+}
+
+// =============================================================================
+// Utilitaires privés
+// =============================================================================
+
+IROperand IRGenerator::newTemp(IRType type) {
+    // On génère un nom "t0", "t1", etc.
+    std::string name = "t" + std::to_string(tempCounter_++);
+    // On émet une instruction d'assignation avec une valeur vide — ce sera
+    // rempli juste après. En pratique on émet la vraie instruction directement,
+    // donc newTemp() sert juste à réserver le nom.
+    // (On n'émet PAS de déclaration ici — c'est l'instruction qui porte le type.)
+    return name;
+}
+
+std::string IRGenerator::newLabel(const std::string& prefix) {
+    return prefix + "_" + std::to_string(labelCounter_++);
+}
+
+std::string IRGenerator::newFuncName(const std::string& hint) {
+    if (!hint.empty()) {
+        // On sanitise le nom (remplace - par _ pour être valide en C)
+        std::string safe = hint;
+        std::replace(safe.begin(), safe.end(), '-', '_');
+        return safe;
+    }
+    return "__fn" + std::to_string(funcCounter_++);
+}
+
+void IRGenerator::emit(IRInstruction instr) {
+    currentBlock_->emit(std::move(instr));
+}
+
+// =============================================================================
+// Inférence de type basique
+// =============================================================================
+//
+// Pour l'instant, on fait une inférence locale simple.
+// On n'a pas de vrai système de types — on retourne UNKNOWN si on ne sait pas.
+// Le générateur C pourra traiter UNKNOWN comme "int" par défaut.
+//
+
+IRType IRGenerator::inferType(ASTNode* node) {
+    // Littéraux → type direct
+    if (dynamic_cast<IntegerLit*>(node))  return IRType::INT;
+    if (dynamic_cast<FloatLit*>(node))    return IRType::FLOAT;
+    if (dynamic_cast<CharLit*>(node))     return IRType::CHAR;
+    if (dynamic_cast<StringLit*>(node))   return IRType::STRING;
+    if (dynamic_cast<BoolLit*>(node))     return IRType::BOOL;
+
+    // Identifier → on cherche dans la table des types
+    if (auto* id = dynamic_cast<Identifier*>(node)) {
+        auto it = typeTable_.find(id->getName());
+        if (it != typeTable_.end()) return it->second;
+    }
+
+    // SExpr → on regarde le premier enfant pour déduire le type de retour
+    if (auto* sexpr = dynamic_cast<SExpr*>(node)) {
+        if (!sexpr->getChildren().empty()) {
+            ASTNode* head = sexpr->getChildren()[0];
+            if (auto* prim = dynamic_cast<Primitive*>(head)) {
+                std::string name = prim->getName();
+                // Les opérateurs arithmétiques retournent le type de leur 1er opérande
+                if (name == "+" || name == "-" || name == "*" || name == "/") {
+                    if (sexpr->getChildren().size() > 1)
+                        return inferType(sexpr->getChildren()[1]);
+                }
+                // Les comparaisons retournent toujours un bool (int en C)
+                if (name == "<" || name == ">" || name == "=" ||
+                    name == "<=" || name == ">=")
+                    return IRType::BOOL;
+            }
+        }
+    }
+
+    return IRType::UNKNOWN;
+}
+
+// =============================================================================
+// VISIT : Littéraux
+// =============================================================================
+//
+// Pour chaque littéral, on met simplement sa valeur textuelle dans lastResult_.
+// On n'émet PAS d'instruction : une constante n'a pas besoin d'un temporaire
+// tant qu'elle n'est pas utilisée dans une opération.
+//
+
+void IRGenerator::visit(IntegerLit* node) {
+    lastResult_ = std::to_string(node->value);
+}
+
+void IRGenerator::visit(FloatLit* node) {
+    // On force le "f" pour que le générateur C produise un float et pas un double
+    lastResult_ = std::to_string(node->value) + "f";
+}
+
+void IRGenerator::visit(CharLit* node) {
+    // On enveloppe dans des apostrophes pour le C : 'a'
+    lastResult_ = std::string("'") + node->value + "'";
+}
+
+void IRGenerator::visit(StringLit* node) {
+    // On enveloppe dans des guillemets pour le C : "hello"
+    lastResult_ = "\"" + node->value + "\"";
+}
+
+void IRGenerator::visit(BoolLit* node) {
+    // En C, true = 1, false = 0
+    lastResult_ = node->value ? "1" : "0";
+}
+
+// =============================================================================
+// VISIT : Identifier
+// =============================================================================
+//
+// Un identifiant est une référence à une variable existante.
+// On met juste son nom dans lastResult_ (après sanitisation pour le C).
+//
+
+void IRGenerator::visit(Identifier* node) {
+    std::string safe = node->getName();
+    std::replace(safe.begin(), safe.end(), '-', '_');
+    lastResult_ = safe;
+}
+
+// =============================================================================
+// VISIT : Primitive
+// =============================================================================
+//
+// Une primitive (car, cdr, cons, etc.) au niveau ATOME (pas dans une SExpr)
+// est juste un nom de fonction. On met son nom dans lastResult_.
+// Le cas d'utilisation réel (comme opérateur d'une SExpr) est géré dans visit(SExpr*).
+//
+
+void IRGenerator::visit(Primitive* node) {
+    lastResult_ = node->getName();
+}
+
+// =============================================================================
+// VISIT : SExpr — le cœur du générateur
+// =============================================================================
+//
+// C'est ici que tout se passe. Une SExpr a la forme :
+//   (operateur arg1 arg2 ...)
+//
+// L'opérateur (premier enfant) détermine quelle forme spéciale ou quel appel
+// de fonction on doit générer.
+//
+// ATTENTION : une SExpr quotée (ex: '(1 2 3)) n'est PAS évaluée —
+// elle représente une donnée. Pour l'instant on la traite comme un commentaire
+// et on retourne une chaîne placeholder. (Les listes Lisp nécessiteraient
+// une vraie représentation de listes au runtime, ce qu'on fera côté C.)
+//
+
+void IRGenerator::visit(SExpr* node) {
+
+    // --- Cas 1 : SExpr vide ---
+    if (node->getChildren().empty()) {
+        lastResult_ = ""; // NIL
+        return;
+    }
+
+    // --- Cas 2 : SExpr quotée → donnée, pas du code ---
+    if (node->isQuotedNode()) {
+        // On génère juste un commentaire/placeholder pour l'instant
+        lastResult_ = "/*quoted-list*/";
+        return;
+    }
+
+    // --- Cas 3 : On inspecte le premier enfant pour identifier la forme ---
+    ASTNode* head = node->getChildren()[0];
+
+    // Est-ce une primitive ?
+    if (auto* prim = dynamic_cast<Primitive*>(head)) {
+        std::string primName = prim->getName();
+
+        // Formes spéciales reconnues
+        if      (primName == "if")     { lastResult_ = handleIf(node);         return; }
+        else if (primName == "setq")   { lastResult_ = handleSetq(node);        return; }
+        else if (primName == "lambda") { lastResult_ = handleLambda(node);      return; }
+        else if (primName == "progn")  { lastResult_ = handleProgn(node);       return; }
+        else if (primName == "print")  { lastResult_ = handlePrint(node);       return; }
+        else if (primName == "scan")   { lastResult_ = handleScan(node);        return; }
+
+        // Opérateurs arithmétiques et de comparaison
+        else if (primName == "+")  { lastResult_ = handleArithmetic(node, "+");  return; }
+        else if (primName == "-")  { lastResult_ = handleArithmetic(node, "-");  return; }
+        else if (primName == "*")  { lastResult_ = handleArithmetic(node, "*");  return; }
+        else if (primName == "/")  { lastResult_ = handleArithmetic(node, "/");  return; }
+        else if (primName == "<")  { lastResult_ = handleArithmetic(node, "<");  return; }
+        else if (primName == ">")  { lastResult_ = handleArithmetic(node, ">");  return; }
+        else if (primName == "=")  { lastResult_ = handleArithmetic(node, "=="); return; }
+        //else if (primName == "<=") { lastResult_ = handleArithmetic(node, "<="); return; }
+        //else if (primName == ">=") { lastResult_ = handleArithmetic(node, ">="); return; }
+
+        // Primitives Lisp (car, cdr, cons...) → appels de fonctions runtime
+        else { lastResult_ = handlePrimitive(node); return; }
+    }
+
+    // Est-ce un identifiant ? → appel de fonction utilisateur
+    if (dynamic_cast<Identifier*>(head)) {
+        lastResult_ = handleCall(node);
+        return;
+    }
+
+    // Cas inattendu : on met un placeholder
+    lastResult_ = "/*unknown-sexpr*/";
+}
+
+// =============================================================================
+// Handlers des formes spéciales
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// handleIf : (if cond then else?)
+// -----------------------------------------------------------------------------
+//
+// On génère le pattern classique avec labels et sauts :
+//
+//   <évaluation de cond>   → résultat dans t_cond
+//   if (t_cond) goto L_then_N; else goto L_else_N;
+//   L_then_N:
+//   <évaluation de then>   → résultat dans t_then
+//   t_result = t_then
+//   goto L_end_N;
+//   L_else_N:
+//   <évaluation de else>   → résultat dans t_else
+//   t_result = t_else
+//   L_end_N:
+//
+
+IROperand IRGenerator::handleIf(SExpr* node) {
+    const auto& children = node->getChildren();
+    // children[0] = "if", children[1] = cond, children[2] = then, children[3] = else?
+
+    // Génère les labels uniques pour ce if
+    std::string labelThen = newLabel("L_then");
+    std::string labelElse = newLabel("L_else");
+    std::string labelEnd  = newLabel("L_end");
+
+    // --- Évalue la condition ---
+    children[1]->accept(this);
+    IROperand condResult = lastResult_;
+
+    // --- Saut conditionnel ---
+    emit(IR_CondJump{ condResult, labelThen, labelElse });
+
+    // --- Branche THEN ---
+    emit(IR_Label{ labelThen });
+    children[2]->accept(this);
+    IROperand thenResult = lastResult_;
+
+    // On stocke le résultat dans un temporaire commun
+    IROperand result = newTemp(IRType::UNKNOWN);
+    emit(IR_Assign{ IRType::UNKNOWN, result, thenResult });
+    emit(IR_Jump{ labelEnd });
+
+    // --- Branche ELSE (optionnelle) ---
+    emit(IR_Label{ labelElse });
+    if (children.size() >= 4) {
+        children[3]->accept(this);
+        IROperand elseResult = lastResult_;
+        emit(IR_Assign{ IRType::UNKNOWN, result, elseResult });
+    }
+
+    // --- Label de fin ---
+    emit(IR_Label{ labelEnd });
+
+    return result;
+}
+
+// -----------------------------------------------------------------------------
+// handleSetq : (setq name value)
+// -----------------------------------------------------------------------------
+//
+// Exemple :
+//   (setq x 42)
+//   → int x = 42;
+//   (setq x (+ x 1))
+//   → t0 = x + 1;
+//      x = t0;
+//
+
+IROperand IRGenerator::handleSetq(SExpr* node) {
+    const auto& children = node->getChildren();
+    std::string varName = children[1]->getName();
+    std::replace(varName.begin(), varName.end(), '-', '_');
+
+    children[2]->accept(this);
+    IROperand valueResult = lastResult_;
+
+    IRType type = inferType(children[2]);
+
+    // ← NOUVEAU : on mémorise le type de cette variable
+    typeTable_[varName] = type;
+
+    emit(IR_Assign{ type, varName, valueResult });
+    return varName;
+}
+
+// -----------------------------------------------------------------------------
+// handleLambda : (lambda (params...) body...)
+// -----------------------------------------------------------------------------
+//
+// C'est la forme la plus complexe.
+// On doit :
+//   1. Créer un nouveau IR_Block pour le corps de la fonction
+//   2. Sauvegarder le bloc courant, pointer sur le nouveau bloc
+//   3. Générer le corps dans ce nouveau bloc
+//   4. Restaurer le bloc courant
+//   5. Ajouter la fonction au programme IR
+//   6. Retourner le nom de la fonction (pour pouvoir l'appeler)
+//
+
+IROperand IRGenerator::handleLambda(SExpr* node) {
+    const auto& children = node->getChildren();
+    // children[0] = "lambda"
+    // children[1] = SExpr des paramètres ex: (x y z)
+    // children[2..] = expressions du corps
+
+    // Génère un nom pour la fonction
+    std::string funcName = newFuncName();
+
+    // --- Récupère les paramètres ---
+    std::vector<std::pair<IRType, std::string>> params;
+    if (auto* paramList = dynamic_cast<SExpr*>(children[1])) {
+        for (ASTNode* p : paramList->getChildren()) {
+            std::string pname = p->getName();
+            std::replace(pname.begin(), pname.end(), '-', '_');
+            params.push_back({ IRType::UNKNOWN, pname }); // type inconnu pour l'instant
+        }
+    }
+
+    // --- Crée la déclaration de fonction ---
+    IR_FuncDecl decl;
+    decl.returnType = IRType::UNKNOWN;
+    decl.name       = funcName;
+    decl.params     = params;
+
+    // --- Crée le bloc du corps ---
+    IR_Block bodyBlock;
+    bodyBlock.name = funcName;
+
+    // --- Sauvegarde le bloc courant et bascule sur le corps ---
+    IR_Block* savedBlock = currentBlock_;
+    currentBlock_ = &bodyBlock;
+
+    // --- Génère le corps (toutes les expressions) ---
+    IROperand lastBodyResult = "";
+    for (size_t i = 2; i < children.size(); ++i) {
+        children[i]->accept(this);
+        lastBodyResult = lastResult_;
+    }
+
+    // La dernière expression est la valeur de retour
+    if (!lastBodyResult.empty()) {
+        emit(IR_Return{ lastBodyResult });
+    }
+
+    // --- Restaure le bloc courant ---
+    currentBlock_ = savedBlock;
+
+    // --- Enregistre la fonction dans le programme ---
+    program_.functions.emplace_back(decl, std::move(bodyBlock));
+
+    // Retourne le nom de la fonction (utile pour setq)
+    lastResult_ = funcName;
+    return funcName;
+}
+
+// -----------------------------------------------------------------------------
+// handleProgn : (progn expr1 expr2 ...)
+// -----------------------------------------------------------------------------
+//
+// Évalue les expressions dans l'ordre et retourne la dernière valeur.
+// C'est le cas le plus simple — aucune instruction spéciale.
+//
+
+IROperand IRGenerator::handleProgn(SExpr* node) {
+    const auto& children = node->getChildren();
+    IROperand result = "";
+    for (size_t i = 1; i < children.size(); ++i) {
+        children[i]->accept(this);
+        result = lastResult_;
+    }
+    return result;
+}
+
+// -----------------------------------------------------------------------------
+// handlePrint : (print expr)
+// -----------------------------------------------------------------------------
+
+IROperand IRGenerator::handlePrint(SExpr* node) {
+    const auto& children = node->getChildren();
+    // Évalue l'argument
+    children[1]->accept(this);
+    IROperand val = lastResult_;
+    IRType    type = inferType(children[1]);
+    emit(IR_Print{ type, val });
+    return ""; // void
+}
+
+// -----------------------------------------------------------------------------
+// handleScan : (scan var)
+// -----------------------------------------------------------------------------
+
+IROperand IRGenerator::handleScan(SExpr* node) {
+    const auto& children = node->getChildren();
+    std::string varName = children[1]->getName();
+    std::replace(varName.begin(), varName.end(), '-', '_');
+    IRType type = inferType(children[1]);
+    emit(IR_Scan{ type, varName });
+    return varName;
+}
+
+// -----------------------------------------------------------------------------
+// handleArithmetic : (+, -, *, /, <, >, ==, ...)
+// -----------------------------------------------------------------------------
+//
+// On gère les cas N-aires : (+ 1 2 3 4)
+// On les décompose en opérations binaires successives :
+//   t0 = 1 + 2
+//   t1 = t0 + 3
+//   t2 = t1 + 4
+//
+
+IROperand IRGenerator::handleArithmetic(SExpr* node, const std::string& op) {
+    const auto& children = node->getChildren();
+    // children[0] = l'opérateur, children[1..] = les opérandes
+
+    // Évalue le premier opérande
+    children[1]->accept(this);
+    IROperand acc = lastResult_;
+    IRType type = inferType(children[1]);
+
+    // Enchaîne les opérations suivantes
+    for (size_t i = 2; i < children.size(); ++i) {
+        children[i]->accept(this);
+        IROperand right = lastResult_;
+
+        IROperand dest = newTemp(type);
+        emit(IR_BinOp{ type, dest, acc, op, right });
+        acc = dest;
+    }
+
+    return acc;
+}
+
+// -----------------------------------------------------------------------------
+// handlePrimitive : car, cdr, cons, null?, atom?, number?
+// Compilés en appels de fonctions C runtime (on suppose qu'elles existent)
+// -----------------------------------------------------------------------------
+
+IROperand IRGenerator::handlePrimitive(SExpr* node) {
+    const auto& children = node->getChildren();
+    std::string primName = children[0]->getName();
+
+    // Collecte les arguments
+    std::vector<IROperand> args;
+    for (size_t i = 1; i < children.size(); ++i) {
+        children[i]->accept(this);
+        args.push_back(lastResult_);
+    }
+
+    // Sanitise le nom pour C (null? → lisp_null, atom? → lisp_atom, etc.)
+    std::string cName = "lisp_" + primName;
+    // Remplace les caractères invalides en C
+    std::replace(cName.begin(), cName.end(), '?', '_');
+    std::replace(cName.begin(), cName.end(), '-', '_');
+
+    IROperand dest = newTemp(IRType::UNKNOWN);
+    emit(IR_Call{ IRType::UNKNOWN, dest, cName, args });
+    return dest;
+}
+
+// -----------------------------------------------------------------------------
+// handleCall : appel de fonction utilisateur (funcName arg1 arg2 ...)
+// -----------------------------------------------------------------------------
+
+IROperand IRGenerator::handleCall(SExpr* node) {
+    const auto& children = node->getChildren();
+
+    // Récupère le nom de la fonction
+    std::string funcName = children[0]->getName();
+    std::replace(funcName.begin(), funcName.end(), '-', '_');
+
+    // Évalue les arguments
+    std::vector<IROperand> args;
+    for (size_t i = 1; i < children.size(); ++i) {
+        children[i]->accept(this);
+        args.push_back(lastResult_);
+    }
+
+    IROperand dest = newTemp(IRType::UNKNOWN);
+    emit(IR_Call{ IRType::UNKNOWN, dest, funcName, args });
+    return dest;
+}
+
+// =============================================================================
+// Dump de l'IR (pour le debug)
+// =============================================================================
+
+void IRGenerator::dumpIR(const IRProgram& program, std::ostream& out) const {
+    out << "=== IR DUMP ===\n\n";
+
+    // Fonctions d'abord
+    for (const auto& [decl, body] : program.functions) {
+        out << "FUNCTION " << decl.name << "(";
+        for (size_t i = 0; i < decl.params.size(); ++i) {
+            out << irTypeToC(decl.params[i].first) << " " << decl.params[i].second;
+            if (i + 1 < decl.params.size()) out << ", ";
+        }
+        out << ") -> " << irTypeToC(decl.returnType) << " {\n";
+        dumpBlock(body, out);
+        out << "}\n\n";
+    }
+
+    // Bloc principal
+    out << "MAIN {\n";
+    dumpBlock(program.mainBlock, out);
+    out << "}\n";
+}
+
+void IRGenerator::dumpBlock(const IR_Block& block, std::ostream& out) const {
+    for (const auto& instr : block.instructions) {
+        out << "  " << instrToString(instr) << "\n";
+    }
+}
+
+std::string IRGenerator::instrToString(const IRInstruction& instr) const {
+    if (std::holds_alternative<IR_Assign>(instr)) {
+        const auto& a = std::get<IR_Assign>(instr);
+        return irTypeToC(a.type) + " " + a.dest + " = " + a.src + ";";
+    }
+    if (std::holds_alternative<IR_BinOp>(instr)) {
+        const auto& b = std::get<IR_BinOp>(instr);
+        return irTypeToC(b.type) + " " + b.dest + " = " + b.left + " " + b.op + " " + b.right + ";";
+    }
+    if (std::holds_alternative<IR_Call>(instr)) {
+        const auto& c = std::get<IR_Call>(instr);
+        std::string s = irTypeToC(c.type) + " " + c.dest + " = " + c.funcName + "(";
+        for (size_t i = 0; i < c.args.size(); ++i) {
+            s += c.args[i];
+            if (i + 1 < c.args.size()) s += ", ";
+        }
+        return s + ");";
+    }
+    if (std::holds_alternative<IR_FuncDecl>(instr)) {
+        return "/* func decl inline — should not appear in a block */";
+    }
+    if (std::holds_alternative<IR_CondJump>(instr)) {
+        const auto& j = std::get<IR_CondJump>(instr);
+        return "if (" + j.condition + ") goto " + j.labelTrue + "; else goto " + j.labelFalse + ";";
+    }
+    if (std::holds_alternative<IR_Label>(instr)) {
+        return std::get<IR_Label>(instr).name + ":";
+    }
+    if (std::holds_alternative<IR_Jump>(instr)) {
+        return "goto " + std::get<IR_Jump>(instr).label + ";";
+    }
+    if (std::holds_alternative<IR_Return>(instr)) {
+        return "return " + std::get<IR_Return>(instr).value + ";";
+    }
+    if (std::holds_alternative<IR_Print>(instr)) {
+        const auto& p = std::get<IR_Print>(instr);
+        return "PRINT(" + p.value + ");";
+    }
+    if (std::holds_alternative<IR_Scan>(instr)) {
+        const auto& s = std::get<IR_Scan>(instr);
+        return "SCAN(" + s.dest + ");";
+    }
+    return "/* unknown instruction */";
+}

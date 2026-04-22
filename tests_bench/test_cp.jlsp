@@ -6,9 +6,12 @@
     )
     (+ 1 2 (* 3 4))
 
+
+
 §§ Déclaration simple et calcul imbriqué
 ( : a 10 )
 ( : b ( + a ( * 5 2.5 ) ) )
+( € c )
 
 §§ Utilisation de littéraux différents
 ( : message "Resultat:" )

@@ -24,4 +24,9 @@ add_executable(Compilateur_JULIESP src/main.cpp
         include/SymbolTable.h
         src/SemanticAnalyzer.cpp
         include/SemanticAnalyzer.h
+        include/IR.h
+        include/IRGenerator.h
+        src/IRGenerator.cpp
+        include/CGenerator.h
+        src/CGenerator.cpp
 )

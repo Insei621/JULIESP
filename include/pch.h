@@ -15,6 +15,7 @@
 #include <stdexcept>
 #include <ostream>
 #include <sstream>
+#include <variant>
 #include <filesystem>
 #include <cstdlib> // Pour system()
 #include <unordered_map>

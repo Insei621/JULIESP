@@ -9,48 +9,18 @@
 #include "../include/Lexer.h"
 #include "../include/pch.h"
 #include "../include/SemanticAnalyzer.h"
+#include "../include/IR.h"
+#include "../include/IRGenerator.h"
+#include "../include/CGenerator.h"
 
-/**
+/*
  * Affichage lisible des TokenType
  */
 std::string testCode = R"(
-§!
-   Ce test vérifie si ton analyseur sémantique est "piégé"
-   par le symbole ² (quote).
-!§
-
-( : x 10 )
-
-( : test_quote
-    ( £ ( l )
-        ( ;
-            ( : y ²x ) §§ Ici, y ne vaut pas 10, il vaut le SYMBOLE x.
-            ( : z ²( + 1 2 ) ) §§ Ici, z ne vaut pas 3, il vaut la LISTE (+ 1 2).
-
-            ( € "La variable x vaut :" )
-            ( € x )
-
-            ( € "Le symbole cité y est :" )
-            ( € y )
-
-            §§ Test de shadowing avec quote
-            ( £ ( x )
-                ( ;
-                    ( : x 50 )
-                    ( € "Ici x local vaut :" )
-                    ( € x )
-                    ( € "Mais ²x reste le symbole :" )
-                    ( € ²x )
-                )
-            )
-        )
-    )
-)
-
-§§ Une liste qui contient des calculs et des quotes
-( : ma_liste ( & ²test ( & ( + 5 5 ) ( & ²( << ( 1 2 ) ) ù ) ) ) )
-
-( test_quote ma_liste )
+    (: x 10)
+    (: y 20)
+    (: result (+ x y))
+    (€ result)
         )";
 
 
@@ -85,6 +55,19 @@ inline void run_test() {
     // Analyse sémantique
     SemanticAnalyzer semanticAnalyzer;
     semanticAnalyzer.analyze(root);
+
+    // Génération d'IR
+    IRGenerator gen;
+    IRProgram ir = gen.generate(root);
+    gen.dumpIR(ir); // Pour déboguer
+
+    CGenerator cGen;
+    cGen.generateToFile(ir, "output.c");
+
+
+    //system("gcc -o output ../output/output.c");
+
+
 
 }
 
