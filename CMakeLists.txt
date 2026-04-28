@@ -29,4 +29,6 @@ add_executable(Compilateur_JULIESP src/main.cpp
         src/IRGenerator.cpp
         include/CGenerator.h
         src/CGenerator.cpp
+        src/loadTools.cpp
+        include/loadTools.h
 )

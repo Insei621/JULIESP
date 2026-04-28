@@ -6,22 +6,13 @@
 #include "lisp_runtime.h"
 
 int main(void) {
-    int x;
+    int age;
     int t0;
-    char* a;
-    char* b;
-    int t2;
 
-    x = 10;
-    t0 = x > 5;
-    if (t0) {
-        printf("%s\n", "X est grand");
-    } else {
-        printf("%s\n", "X est petit");
-    }
-    a = "hello";
-    b = a;
-    t2 = a == b;
-    printf("%d\n", t2);
+    printf("%s\n", "Entrez votre age :");
+    age = 0;
+    scanf("%d", &age);
+    t0 = age + 1;
+    printf("%d\n", t0);
     return 0;
 }

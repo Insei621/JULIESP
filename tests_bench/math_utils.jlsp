@@ -1,0 +1,8 @@
+§§ math_utils.jsp
+§§ Une petite librairie pour tester le chargement externe
+
+§§ Calcul du carré
+(: carre (£ (n) (* n n)))
+
+§§ Vérification si majeur (pour tester les booléens au passage)
+(: est-majeur (£ (age) (> age 17)))

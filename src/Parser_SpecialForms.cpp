@@ -4,6 +4,7 @@
 
 #include "../include/pch.h"
 #include "../include/Parser.h"
+#include "../include/loadTools.h"
 
 ASTNode* Parser::parseIf() {
     int l = showNext().line;
@@ -122,27 +123,35 @@ ASTNode* Parser::parseLoad() {
     int l = showNext().line;
     int c = showNext().cursor;
 
-    expect(TokenType::CORE_LOAD);
+    expect(TokenType::CORE_LOAD); // On consomme '$'
+    Token pathTok = expect(TokenType::LIT_STRING); // On récupère le nom du fichier
+    expect(TokenType::DEL_RBRACE); // On ferme la parenthèse du load ')'
 
-    // 1. Création du nœud parent
-    SExpr* loadNode = new SExpr(l, c, false);
+    // --- LE CŒUR DE LA LOGIQUE ---
 
-    // 2. Ajout du symbole 'load' et consommation du token
-    loadNode->add(new Primitive("load", l, c, false));
+    // A. Ouvrir et lire
+    std::string content = readFile(pathTok.value);
 
-    // 3. Le paramètre doit être le chemin du fichier (souvent un String ou Identifier)
-    // On parse l'élément qui représente le chemin
-    if (showNext().type == TokenType::LIT_STRING || showNext().type == TokenType::IDENT) {
-        loadNode->add(parseElement());
-    } else {
-        throw std::logic_error("l"+std::to_string(l)+",c"+std::to_string(c)+" The 'load' function expects a file path (string or identifier).");
+    // B. Nouveau Lexer + nouveau Parser
+    Lexer subLexer(content);
+    std::vector<Token> subTokens = subLexer.tokenize();
+    Parser subParser(subTokens);
+
+    // C. Récupérer l'AST du fichier chargé
+    std::vector<ASTNode*> externalNodes = subParser.parseProgram();
+
+    // D. "Héritage" : On crée un nœud parent pour porter ces enfants
+    SExpr* loadedContent = new SExpr(l, c, false);
+    loadedContent->add(new Primitive("progn", l, c, false)); // Indique qu'on exécute tout
+
+    for (ASTNode* node : externalNodes) {
+        loadedContent->add(node);
     }
 
-    // 5. On ferme la parenthèse
-    expect(TokenType::DEL_RBRACE);
-
-    return loadNode;
+    // On renvoie ce bloc qui contient tout le fichier externe
+    return loadedContent;
 }
+
 
 ASTNode* Parser::parsePrint() {
     int l = showNext().line;
@@ -172,33 +181,35 @@ ASTNode* Parser::parseScan() {
     int l = showNext().line;
     int c = showNext().cursor;
 
-    // 1. Consomme le mot-clé 'scan'
+    // 1. Consomme le mot-clé 'ç' (CORE_SCAN)
     expect(TokenType::CORE_SCAN);
 
-    // 2. On parse exactement UN élément
+    // 2. Création immédiate du nœud parent SExpr
+    SExpr* scanNode = new SExpr(l, c, false);
+
+    // 3. Ajout de la primitive 'ç' (pour que l'IRGenerator le reconnaisse)
+    // On utilise "ç" car c'est ce que ton Lexer a capturé et ce que ton IR attend
+    scanNode->add(new Primitive("ç", l, c, false));
+
+    // 4. On parse l'argument (la variable qui va recevoir la saisie)
     ASTNode* arg = parseElement();
 
-    // 3. Vérification : l'argument est-il un littéral ?
-    // On vérifie si le nœud n'est ni une SExpr, ni un Identifier.
-    // (Ou on vérifie explicitement s'il appartient à tes classes de littéraux)
-    if (dynamic_cast<SExpr*>(arg) || dynamic_cast<Identifier*>(arg)) {
+    // 5. VÉRIFICATION : L'argument DOIT être une variable (Identifier)
+    // On ne peut pas scanner une valeur dans un nombre fixe comme (ç 10)
+    if (!dynamic_cast<Identifier*>(arg)) {
         throw std::runtime_error("Erreur ligne " + std::to_string(l) +
-                                 " : 'scan' attend un littéral (String, Int, ou Float) en argument.");
+                                 " : 'ç' attend un nom de variable (Identifier) en argument.");
     }
 
-    // 4. On s'assure qu'il n'y a pas d'autres arguments avant la fermeture
-    // Si le token suivant n'est pas '}', c'est qu'il y a trop d'arguments.
-    if (showNext().type != TokenType::DEL_RBRACE) {
-        throw std::runtime_error("Erreur ligne " + std::to_string(l) +
-                                  " : 'scan' ne peut prendre qu'un seul argument.");
-    }
-
-    // 5. Construction du nœud AST
-    SExpr* scanNode = new SExpr(l, c, false);
-    scanNode->add(new Primitive("scan", l, c, false));
     scanNode->add(arg);
 
-    // 6. Consomme la parenthèse/accolade fermante
+    // 6. Vérification du nombre d'arguments
+    if (showNext().type != TokenType::DEL_RBRACE) {
+        throw std::runtime_error("Erreur ligne " + std::to_string(l) +
+                                  " : 'ç' ne peut prendre qu'un seul argument.");
+    }
+
+    // 7. Consomme la parenthèse fermante
     expect(TokenType::DEL_RBRACE);
 
     return scanNode;

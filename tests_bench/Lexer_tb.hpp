@@ -17,16 +17,21 @@
  * Affichage lisible des TokenType
  */
 std::string testCode = R"(
-§§ Test du IF et des booléens
-(: x 10)
-(? (> x 5)
-   (€ "X est grand")
-   (€ "X est petit"))
+§§ main.jsp
+§§ Test de l'instruction LOAD
 
-§§ Test de l'égalité d'adresse
-(: a ²hello)
-(: b a)
-(€ (¤ a b)) §§ Doit afficher 1 (vrai)
+($ "math_utils.jsp")
+
+(€ "--- Test du Load ---")
+
+(: mon-age 20)
+
+(? (est-majeur mon-age)
+   (;
+     (€ "Vous êtes majeur.")
+     (€ "Le carré de votre âge est :")
+     (€ (carre mon-age)))
+   (€ "Vous êtes mineur."))
         )";
 
 

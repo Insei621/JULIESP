@@ -118,6 +118,7 @@ ASTNode* Parser::parseSExpr(bool quoted) {
             case TokenType::CORE_PROGN:  return parseProgn();
             case TokenType::CORE_LOAD:   return parseLoad();
             case TokenType::CORE_PRINT:  return parsePrint();
+            case TokenType::CORE_SCAN:   return parseScan();
 
             case TokenType::CALC_PLUS:
             case TokenType::CALC_MOINS:

@@ -240,6 +240,17 @@ void IRGenerator::visit(SExpr* node) {
         else { lastResult_ = handlePrimitive(node); return; }
     }
 
+    if (auto* ident = dynamic_cast<Identifier*>(head)) {
+        // Si l'identifiant est en fait un mot-clé (selon son type de token)
+        // Note : il faut que ton AST conserve le type de token ou que tu
+        // vérifies le nom si ton AST ne garde que le string.
+
+        std::string name = ident->getName();
+        if (name == "ç") { // Ou vérifie le TokenType si ton AST le permet
+            lastResult_ = handleScan(node);
+            return;
+        }
+    }
     // Est-ce un identifiant ? → appel de fonction utilisateur
     if (dynamic_cast<Identifier*>(head)) {
         lastResult_ = handleCall(node);

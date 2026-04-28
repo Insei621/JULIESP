@@ -90,11 +90,11 @@ const std::vector<Lexer::Rule> Lexer::rules = {
     { std::regex(R"(^>>)"), TokenType::MAIN_CDR, false },
 
     // --- Symboles UTF-8 (Codés par octets Hex pour éviter les collisions) ---
-    { std::regex(R"(^(\xC2\xB5|\xCE\xBC))"), TokenType::BOOL_TRUE, false },
+    { std::regex(R"(^(\xC2\xB5|\xCE\xBC))"),  TokenType::BOOL_TRUE, false },
     { std::regex(R"(^\xC3\xB9)"),             TokenType::BOOL_FALSE, false },
     { std::regex(R"(^\xC2\xB2)"),             TokenType::CORE_QUOTE, false },
     { std::regex(R"(^\xE2\x82\xAC)"),         TokenType::CORE_PRINT, false },
-    { std::regex(R"(^\xC3\xA7)"),             TokenType::CORE_SCAN, false },
+    { std::regex(R"(^ç)"),                    TokenType::CORE_SCAN, false },
     { std::regex(R"(^\xC2\xA3)"),             TokenType::CORE_LAMBDA, false },
     { std::regex(R"(^\xC2\xA4)"),             TokenType::CALC_ADREQ, false },
     { std::regex(R"(^\xC2\xB0)"),             TokenType::CALC_NUMBERQ, false },
@@ -177,6 +177,7 @@ inline std::string tokenTypeToString(TokenType type) {
         case TokenType::LIT_STRING:   return "LIT_STRING";
         case TokenType::LIT_CHAR:     return "LIT_CHAR";
         case TokenType::CORE_PRINT:   return "CORE_PRINT"; // Pour le symbole €
+        case TokenType::CORE_SCAN:    return "CORE_SCAN";
 
         // --- Fin / erreur ---
         case TokenType::END_OF_FILE:  return "EOF";
