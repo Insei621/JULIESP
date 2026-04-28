@@ -17,10 +17,16 @@
  * Affichage lisible des TokenType
  */
 std::string testCode = R"(
-    (: x 10)
-    (: y 20)
-    (: result (+ x y))
-    (€ result)
+§§ Test du IF et des booléens
+(: x 10)
+(? (> x 5)
+   (€ "X est grand")
+   (€ "X est petit"))
+
+§§ Test de l'égalité d'adresse
+(: a ²hello)
+(: b a)
+(€ (¤ a b)) §§ Doit afficher 1 (vrai)
         )";
 
 
@@ -62,7 +68,8 @@ inline void run_test() {
     gen.dumpIR(ir); // Pour déboguer
 
     CGenerator cGen;
-    cGen.generateToFile(ir, "output.c");
+    std::filesystem::create_directories("output"); // Crée le dossier s'il n'existe pas
+    cGen.generateToFile(ir, "output/output.c");
 
 
     //system("gcc -o output ../output/output.c");

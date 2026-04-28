@@ -2,7 +2,7 @@
 - quote (')     -> ²
 - if            -> ?
 - setq          -> :
-- lambda        -> £
+- lambda        -> £    // le type de retour d'une fonction lambda est toujours un int
 - progn         -> ;
 - load          -> $
 - print         -> €

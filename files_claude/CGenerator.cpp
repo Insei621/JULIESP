@@ -2,7 +2,7 @@
 // CGenerator.cpp — Implémentation du générateur de code C
 //
 
-#include "../include/CGenerator.h"
+#include "CGenerator.h"
 
 // =============================================================================
 // Point d'entrée principal
@@ -43,13 +43,12 @@ void CGenerator::emitPrologue(const IRProgram& program, std::ostream& out) {
     out << "#include <string.h>\n";
     out << "#include \"lisp_runtime.h\"\n";  // Notre runtime Lisp
     out << "\n";
-    // Génération de prototypes fais par claude mais ça me parait pas utile
-/*
+
     // Forward declarations de toutes les fonctions générées.
     // Sans ça, si __fn1 appelle __fn0 défini après lui, le compilateur C
     // se plaindrait d'un appel à une fonction inconnue.
     if (!program.functions.empty()) {
-        out << "// --- Prototypes --- \n";
+        out << "/* --- Prototypes --- */\n";
         for (const auto& [decl, body] : program.functions) {
             out << irTypeToC(decl.returnType) << " " << decl.name << "(";
             for (size_t i = 0; i < decl.params.size(); ++i) {
@@ -62,7 +61,7 @@ void CGenerator::emitPrologue(const IRProgram& program, std::ostream& out) {
             out << ");\n";
         }
         out << "\n";
-    }*/
+    }
 }
 
 // =============================================================================
@@ -85,12 +84,10 @@ void CGenerator::emitPrologue(const IRProgram& program, std::ostream& out) {
 
 void CGenerator::emitFunctions(const IRProgram& program, std::ostream& out) {
     for (const auto& [decl, body] : program.functions) {
-        /*// Signature
+        // Signature
         // Si le type de retour est UNKNOWN, on met int par défaut
-        //IRType retType = decl.returnType;
-        //out << (retType == IRType::UNKNOWN ? "int" : irTypeToC(retType));*/
-        // Il était au départ prévu de typer dynamiquement les fonctions, mais je vais simplifier en typant en int à chaque fois
-        out << "int";
+        IRType retType = decl.returnType;
+        out << (retType == IRType::UNKNOWN ? "int" : irTypeToC(retType));
         out << " " << decl.name << "(";
 
         if (decl.params.empty()) {
@@ -142,81 +139,28 @@ void CGenerator::emitMain(const IRProgram& program, std::ostream& out) {
 //
 
 void CGenerator::emitBlock(const IR_Block& block, std::ostream& out, int indentLevel) {
+
+    // --- Passe 1 : collecte des déclarations ---
     auto decls = collectDecls(block);
+
+    // On émet les déclarations en tête de bloc (style C89)
     if (!decls.empty()) {
+        out << indent(indentLevel) << "/* --- déclarations --- */\n";
         for (const auto& [type, name] : decls) {
-            out << indent(indentLevel) << irTypeToC(type) << " " << name << ";\n";
+            IRType t = type;
+            out << indent(indentLevel);
+            out << (t == IRType::UNKNOWN ? "int" : irTypeToC(t));
+            out << " " << name << ";\n";
         }
         out << "\n";
     }
 
-    const auto& instrs = block.instructions;
-    size_t i = 0;
-    while (i < instrs.size()) {
-        // Détecte le pattern if/else : CondJump suivi de Label
-        if (std::holds_alternative<IR_CondJump>(instrs[i])) {
-            i = emitIfElse(instrs, i, out, indentLevel);
-        } else {
-            emitInstruction(instrs[i], out, indentLevel);
-            ++i;
-        }
+    // --- Passe 2 : émission des instructions ---
+    for (const auto& instr : block.instructions) {
+        emitInstruction(instr, out, indentLevel);
     }
 }
 
-size_t CGenerator::emitIfElse(const std::vector<IRInstruction>& instrs,
-                               size_t i, std::ostream& out, int indentLevel) {
-    const auto& cj = std::get<IR_CondJump>(instrs[i]);
-    std::string labelThen = cj.labelTrue;
-    std::string labelElse = cj.labelFalse;
-    ++i;
-
-    // Collecte les instructions de la branche THEN (jusqu'au IR_Jump)
-    std::vector<IRInstruction> thenInstrs;
-    // Saute le label then
-    if (i < instrs.size() && std::holds_alternative<IR_Label>(instrs[i])) ++i;
-    while (i < instrs.size() && !std::holds_alternative<IR_Jump>(instrs[i])) {
-        // Ne pas inclure les IR_Assign vides (résultat void)
-        if (std::holds_alternative<IR_Assign>(instrs[i])) {
-            const auto& a = std::get<IR_Assign>(instrs[i]);
-            if (!a.src.empty()) thenInstrs.push_back(instrs[i]);
-        } else {
-            thenInstrs.push_back(instrs[i]);
-        }
-        ++i;
-    }
-    if (i < instrs.size()) ++i; // Saute le IR_Jump
-
-    // Collecte les instructions de la branche ELSE (jusqu'au label de fin)
-    std::vector<IRInstruction> elseInstrs;
-    // Saute le label else
-    if (i < instrs.size() && std::holds_alternative<IR_Label>(instrs[i])) ++i;
-    while (i < instrs.size() && !std::holds_alternative<IR_Label>(instrs[i])) {
-        if (std::holds_alternative<IR_Assign>(instrs[i])) {
-            const auto& a = std::get<IR_Assign>(instrs[i]);
-            if (!a.src.empty()) elseInstrs.push_back(instrs[i]);
-        } else {
-            elseInstrs.push_back(instrs[i]);
-        }
-        ++i;
-    }
-    if (i < instrs.size()) ++i; // Saute le label de fin
-
-    // Émet le if/else C
-    out << indent(indentLevel) << "if (" << cj.condition << ") {\n";
-    for (const auto& instr : thenInstrs)
-        emitInstruction(instr, out, indentLevel + 1);
-    out << indent(indentLevel) << "}";
-
-    if (!elseInstrs.empty()) {
-        out << " else {\n";
-        for (const auto& instr : elseInstrs)
-            emitInstruction(instr, out, indentLevel + 1);
-        out << indent(indentLevel) << "}";
-    }
-    out << "\n";
-
-    return i;
-}
 // =============================================================================
 // SECTION 5 : Collecte des déclarations
 // =============================================================================
@@ -428,15 +372,4 @@ bool CGenerator::isLiteral(const std::string& name) {
     // Commentaire placeholder (quoted list, etc.)
     if (name.rfind("/*", 0) == 0) return true;
     return false;
-}
-
-std::string CGenerator::irTypeToC(IRType type) {
-    switch (type) {
-        case IRType::INT:    return "int";
-        case IRType::BOOL:   return "int";
-        case IRType::FLOAT:  return "float";
-        case IRType::STRING: return "char*";
-        case IRType::VOID:   return "void";
-        default:             return "int"; // Sécurité : au pire, on met int
-    }
 }

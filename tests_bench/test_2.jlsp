@@ -1,0 +1,44 @@
+§§ Test de précision des flottants
+(: resultat (+ 10 0.5))
+(€ resultat)
+
+
+///////////////////////
+
+§§ Définition d'une fonction de calcul d'aire
+(: aire (£ (rayon) (* 3.14159 (* rayon rayon))))
+
+§§ Affichage du résultat pour un rayon de 5
+(€ (aire 5.0))
+
+///////////////////////
+
+§§ Test du IF et des booléens
+(: x 10)
+(? (> x 5)
+   (€ "X est grand")
+   (€ "X est petit"))
+
+§§ Test de l'égalité d'adresse
+(: a ²hello)
+(: b a)
+(€ (¤ a b)) §§ Doit afficher 1 (vrai)
+
+////////////////////////
+
+§§ Utilisation de progn dans un IF
+(: solde 100)
+(? (> solde 50)
+   (; 
+      (: solde (- solde 20))
+      (€ "Achat effectué")
+      (€ solde))
+   (€ "Pas assez d'argent"))
+
+////////////////////////
+
+§§ Test de lecture utilisateur
+(€ "Entrez votre age :")
+(: age 0)
+(ç age)
+(€ (+ age 1)) §§ Affiche l'age l'année prochaine

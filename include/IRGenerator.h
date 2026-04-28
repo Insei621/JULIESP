@@ -104,6 +104,7 @@ private:
 
     // (lambda (params...) body...)
     IROperand handleLambda(SExpr* node);
+    IROperand handleLambdaWithName(SExpr* node, const std::string& name);
 
     // (progn expr1 expr2 ...)
     IROperand handleProgn(SExpr* node);

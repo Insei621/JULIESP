@@ -194,6 +194,11 @@ ASTNode* Parser::parseAtom(bool quoted) {
     if (t.type == TokenType::LIT_FLOAT)  return new FloatLit(std::stod(t.value), l, c, quoted);
     if (t.type == TokenType::LIT_STRING) return new StringLit(t.value, l, c, quoted);
 
+    // 2. NOUVEAU : Littéraux Booléens (µ et ù)
+    if (t.type == TokenType::BOOL_TRUE)  return new BoolLit(true, l, c, quoted);
+    if (t.type == TokenType::BOOL_FALSE) return new BoolLit(false, l, c, quoted);
+
+
     // Identifiants, symboles (+, -, if isolés), etc.
     return new Identifier(t.value, l, c, quoted);
 }

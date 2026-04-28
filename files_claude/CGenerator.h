@@ -52,8 +52,6 @@ private:
     // Traduit un IR_Block complet (avec la passe de déclaration en tête)
     void emitBlock(const IR_Block& block, std::ostream& out, int indentLevel = 1);
 
-    size_t emitIfElse(const std::vector<IRInstruction>& instrs, size_t i, std::ostream& out, int indentLevel);
-
     // Traduit une seule IRInstruction en C
     void emitInstruction(const IRInstruction& instr, std::ostream& out, int indentLevel);
 
@@ -84,8 +82,6 @@ private:
     // Retourne true si une chaîne est une constante littérale
     // (commence par un chiffre, guillemet, apostrophe, ou signe -)
     bool isLiteral(const std::string& name);
-
-    std::string irTypeToC(IRType type);
 };
 
 #endif //COMPILATEUR_JULIESP_CGENERATOR_H

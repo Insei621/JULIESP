@@ -157,11 +157,16 @@ void IRGenerator::visit(BoolLit* node) {
 //
 
 void IRGenerator::visit(Identifier* node) {
-    std::string safe = node->getName();
-    std::replace(safe.begin(), safe.end(), '-', '_');
-    lastResult_ = safe;
-}
+    std::string name = node->getName();
+    if (node->isQuotedNode()) {
+        lastResult_ = "\"" + name + "\""; // Transforme le symbole ²hello en "hello"
+        return;
+    }
 
+    // 2. Nettoyage du nom pour le C (ex: rayon-cercle -> rayon_cercle)
+    std::replace(name.begin(), name.end(), '-', '_');
+    lastResult_ = name;
+}
 // =============================================================================
 // VISIT : Primitive
 // =============================================================================
@@ -214,12 +219,12 @@ void IRGenerator::visit(SExpr* node) {
         std::string primName = prim->getName();
 
         // Formes spéciales reconnues
-        if      (primName == "if")     { lastResult_ = handleIf(node);         return; }
-        else if (primName == "setq")   { lastResult_ = handleSetq(node);        return; }
-        else if (primName == "lambda") { lastResult_ = handleLambda(node);      return; }
-        else if (primName == "progn")  { lastResult_ = handleProgn(node);       return; }
-        else if (primName == "print")  { lastResult_ = handlePrint(node);       return; }
-        else if (primName == "scan")   { lastResult_ = handleScan(node);        return; }
+        if      (primName == "if" || primName == "?")     { lastResult_ = handleIf(node);         return; }
+        else if (primName == "setq" || primName == ":")   { lastResult_ = handleSetq(node);        return; }
+        else if (primName == "lambda" || primName == "£") { lastResult_ = handleLambda(node);      return; }
+        else if (primName == "progn" || primName == ";")  { lastResult_ = handleProgn(node);       return; }
+        else if (primName == "print" || primName == "€")  { lastResult_ = handlePrint(node);       return; }
+        else if (primName == "scan" || primName == "ç")   { lastResult_ = handleScan(node);        return; }
 
         // Opérateurs arithmétiques et de comparaison
         else if (primName == "+")  { lastResult_ = handleArithmetic(node, "+");  return; }
@@ -229,8 +234,7 @@ void IRGenerator::visit(SExpr* node) {
         else if (primName == "<")  { lastResult_ = handleArithmetic(node, "<");  return; }
         else if (primName == ">")  { lastResult_ = handleArithmetic(node, ">");  return; }
         else if (primName == "=")  { lastResult_ = handleArithmetic(node, "=="); return; }
-        //else if (primName == "<=") { lastResult_ = handleArithmetic(node, "<="); return; }
-        //else if (primName == ">=") { lastResult_ = handleArithmetic(node, ">="); return; }
+        else if (primName == "¤") { lastResult_ = handleArithmetic(node, "¤"); return; }
 
         // Primitives Lisp (car, cdr, cons...) → appels de fonctions runtime
         else { lastResult_ = handlePrimitive(node); return; }
@@ -267,7 +271,7 @@ void IRGenerator::visit(SExpr* node) {
 //   t_result = t_else
 //   L_end_N:
 //
-
+/*
 IROperand IRGenerator::handleIf(SExpr* node) {
     const auto& children = node->getChildren();
     // children[0] = "if", children[1] = cond, children[2] = then, children[3] = else?
@@ -291,18 +295,64 @@ IROperand IRGenerator::handleIf(SExpr* node) {
 
     // On stocke le résultat dans un temporaire commun
     IROperand result = newTemp(IRType::UNKNOWN);
-    emit(IR_Assign{ IRType::UNKNOWN, result, thenResult });
+    if (!thenResult.empty()) {
+        emit(IR_Assign{ IRType::UNKNOWN, result, thenResult });
+    }
     emit(IR_Jump{ labelEnd });
-
-    // --- Branche ELSE (optionnelle) ---
+    // branche else
     emit(IR_Label{ labelElse });
     if (children.size() >= 4) {
         children[3]->accept(this);
         IROperand elseResult = lastResult_;
-        emit(IR_Assign{ IRType::UNKNOWN, result, elseResult });
+        if (!elseResult.empty()) {
+            emit(IR_Assign{ IRType::UNKNOWN, result, elseResult });
+        }
     }
 
-    // --- Label de fin ---
+    emit(IR_Label{ labelEnd });
+
+    return result;
+    return result;
+}
+*/
+IROperand IRGenerator::handleIf(SExpr* node) {
+    const auto& children = node->getChildren();
+
+    // Évalue la condition dans un temporaire
+    children[1]->accept(this);
+    IROperand condResult = lastResult_;
+    IRType condType = inferType(children[1]);
+
+    // Temporaire pour stocker le résultat (si les branches retournent une valeur)
+    IROperand result = newTemp(IRType::UNKNOWN);
+
+    // Émet : if (cond) goto L_then; else goto L_else;
+    std::string labelThen = newLabel("L_then");
+    std::string labelElse = newLabel("L_else");
+    std::string labelEnd  = newLabel("L_end");
+
+    emit(IR_CondJump{ condResult, labelThen, labelElse });
+
+    // Branche THEN
+    emit(IR_Label{ labelThen });
+    children[2]->accept(this);
+    IROperand thenResult = lastResult_;
+    if (!thenResult.empty()) {
+        emit(IR_Assign{ IRType::UNKNOWN, result, thenResult });
+    }
+    emit(IR_Jump{ labelEnd });
+
+    // Branche ELSE
+    emit(IR_Label{ labelElse });
+    if (children.size() >= 4) {
+        children[3]->accept(this);
+        IROperand elseResult = lastResult_;
+        if (!elseResult.empty()) {
+            emit(IR_Assign{ IRType::UNKNOWN, result, elseResult });
+        }
+    }
+
+    // Label de fin — toujours émis
     emit(IR_Label{ labelEnd });
 
     return result;
@@ -322,18 +372,44 @@ IROperand IRGenerator::handleIf(SExpr* node) {
 
 IROperand IRGenerator::handleSetq(SExpr* node) {
     const auto& children = node->getChildren();
+
+    // 1. On récupère le nom de la variable (Cible)
     std::string varName = children[1]->getName();
     std::replace(varName.begin(), varName.end(), '-', '_');
 
-    children[2]->accept(this);
+    // 2. On identifie le nœud de valeur (Source)
+    ASTNode* valueNode = children[2];
+
+    // 3. Gestion spécifique des Lambdas (Fonctions nommées)
+    if (auto* sexpr = dynamic_cast<SExpr*>(valueNode)) {
+        if (!sexpr->getChildren().empty()) {
+            if (auto* prim = dynamic_cast<Primitive*>(sexpr->getChildren()[0])) {
+                if (prim->getName() == "lambda" || prim->getName() == "£") {
+                    handleLambdaWithName(sexpr, varName);
+                    // On part du principe qu'une fonction est un type spécial ou UNKNOWN en C
+                    typeTable_[varName] = IRType::UNKNOWN;
+                    return varName;
+                }
+            }
+        }
+    }
+
+    // 4. Cas normal : Calcul de la valeur
+    valueNode->accept(this); // Génère les instructions pour calculer la valeur
     IROperand valueResult = lastResult_;
 
-    IRType type = inferType(children[2]);
+    // 5. Détermination du type
+    IRType type;
+    if (valueNode->isQuotedNode()) { // Utilise bien la méthode publique !
+        type = IRType::STRING;
+    } else {
+        type = inferType(valueNode);
+    }
 
-    // ← NOUVEAU : on mémorise le type de cette variable
+    // 6. Mise à jour et émission
     typeTable_[varName] = type;
-
     emit(IR_Assign{ type, varName, valueResult });
+
     return varName;
 }
 
@@ -352,15 +428,14 @@ IROperand IRGenerator::handleSetq(SExpr* node) {
 //
 
 IROperand IRGenerator::handleLambda(SExpr* node) {
+    return handleLambdaWithName(node, "");  // nom générique si pas de setq
+}
+
+// Dans IRGenerator.cpp — même logique que handleLambda mais avec nom imposé
+IROperand IRGenerator::handleLambdaWithName(SExpr* node, const std::string& name) {
     const auto& children = node->getChildren();
-    // children[0] = "lambda"
-    // children[1] = SExpr des paramètres ex: (x y z)
-    // children[2..] = expressions du corps
+    std::string funcName = newFuncName(name);  // utilise "add" au lieu de "__fn0"
 
-    // Génère un nom pour la fonction
-    std::string funcName = newFuncName();
-
-    // --- Récupère les paramètres ---
     std::vector<std::pair<IRType, std::string>> params;
     if (auto* paramList = dynamic_cast<SExpr*>(children[1])) {
         for (ASTNode* p : paramList->getChildren()) {
@@ -375,6 +450,11 @@ IROperand IRGenerator::handleLambda(SExpr* node) {
     decl.returnType = IRType::UNKNOWN;
     decl.name       = funcName;
     decl.params     = params;
+
+    // Enregistre les paramètres dans typeTable_ pour que le corps puisse les utiliser
+    for (const auto& [ptype, pname] : params) {
+        typeTable_[pname] = ptype; // UNKNOWN au départ, patché plus tard par handleCall
+    }
 
     // --- Crée le bloc du corps ---
     IR_Block bodyBlock;
@@ -401,6 +481,32 @@ IROperand IRGenerator::handleLambda(SExpr* node) {
 
     // --- Enregistre la fonction dans le programme ---
     program_.functions.emplace_back(decl, std::move(bodyBlock));
+
+    // Déduit le type de retour depuis la dernière instruction return du corps
+    IRType retType = IRType::UNKNOWN;
+    for (const auto& instr : bodyBlock.instructions) {
+        if (std::holds_alternative<IR_Return>(instr)) {
+            const std::string& retVal = std::get<IR_Return>(instr).value;
+            auto it = typeTable_.find(retVal);
+            if (it != typeTable_.end() && it->second != IRType::UNKNOWN) {
+                retType = it->second;
+            } else {
+                // Le retval est peut-être un temporaire — cherche dans les BinOp du bloc
+                for (const auto& i2 : bodyBlock.instructions) {
+                    if (std::holds_alternative<IR_BinOp>(i2)) {
+                        const auto& b = std::get<IR_BinOp>(i2);
+                        if (b.dest == retVal && b.type != IRType::UNKNOWN) {
+                            retType = b.type; break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    decl.returnType = retType;
+
+    // Enregistre aussi dans typeTable_ pour que handleCall puisse le trouver
+    typeTable_[funcName] = retType;
 
     // Retourne le nom de la fonction (utile pour setq)
     lastResult_ = funcName;
@@ -465,23 +571,33 @@ IROperand IRGenerator::handleScan(SExpr* node) {
 
 IROperand IRGenerator::handleArithmetic(SExpr* node, const std::string& op) {
     const auto& children = node->getChildren();
-    // children[0] = l'opérateur, children[1..] = les opérandes
 
-    // Évalue le premier opérande
+    // Cas spécifique pour l'égalité d'adresse JulieSP -> C
+    if (op == "¤") {
+        children[1]->accept(this);
+        IROperand left = lastResult_;
+
+        children[2]->accept(this);
+        IROperand right = lastResult_;
+
+        IROperand dest = newTemp(IRType::BOOL);
+        // On demande explicitement au générateur C d'écrire "=="
+        emit(IR_BinOp{ IRType::BOOL, dest, left, "==", right });
+        return dest;
+    }
+
+    // --- Reste de ta fonction pour +, -, *, / ---
     children[1]->accept(this);
     IROperand acc = lastResult_;
     IRType type = inferType(children[1]);
 
-    // Enchaîne les opérations suivantes
     for (size_t i = 2; i < children.size(); ++i) {
         children[i]->accept(this);
         IROperand right = lastResult_;
-
         IROperand dest = newTemp(type);
         emit(IR_BinOp{ type, dest, acc, op, right });
         acc = dest;
     }
-
     return acc;
 }
 
@@ -492,46 +608,87 @@ IROperand IRGenerator::handleArithmetic(SExpr* node, const std::string& op) {
 
 IROperand IRGenerator::handlePrimitive(SExpr* node) {
     const auto& children = node->getChildren();
-    std::string primName = children[0]->getName();
+    std::string primName = children[0]->getName(); // C'est primName qu'il faut utiliser !
 
-    // Collecte les arguments
     std::vector<IROperand> args;
     for (size_t i = 1; i < children.size(); ++i) {
         children[i]->accept(this);
         args.push_back(lastResult_);
     }
 
-    // Sanitise le nom pour C (null? → lisp_null, atom? → lisp_atom, etc.)
-    std::string cName = "lisp_" + primName;
-    // Remplace les caractères invalides en C
-    std::replace(cName.begin(), cName.end(), '?', '_');
-    std::replace(cName.begin(), cName.end(), '-', '_');
+    // Traduction du nom pour le C
+    std::string cName;
+    IRType retType = IRType::UNKNOWN;
 
-    IROperand dest = newTemp(IRType::UNKNOWN);
-    emit(IR_Call{ IRType::UNKNOWN, dest, cName, args });
+    if (primName == "¤") {
+        retType = IRType::BOOL;
+        return handleArithmetic(node, "¤");
+    }
+    else if (primName == "null?") {
+        cName = "lisp_null_";
+        retType = IRType::BOOL;
+    }
+    else {
+        cName = "lisp_" + primName;
+        // Nettoyage des caractères interdits en C
+        std::replace(cName.begin(), cName.end(), '?', '_');
+        std::replace(cName.begin(), cName.end(), '-', '_');
+    }
+
+    IROperand dest = newTemp(retType);
+    emit(IR_Call{ retType, dest, cName, args });
     return dest;
 }
-
 // -----------------------------------------------------------------------------
 // handleCall : appel de fonction utilisateur (funcName arg1 arg2 ...)
 // -----------------------------------------------------------------------------
 
 IROperand IRGenerator::handleCall(SExpr* node) {
     const auto& children = node->getChildren();
-
-    // Récupère le nom de la fonction
     std::string funcName = children[0]->getName();
     std::replace(funcName.begin(), funcName.end(), '-', '_');
 
-    // Évalue les arguments
+    // Évalue les arguments et collecte leurs types
     std::vector<IROperand> args;
+    std::vector<IRType>    argTypes;
     for (size_t i = 1; i < children.size(); ++i) {
         children[i]->accept(this);
         args.push_back(lastResult_);
+        argTypes.push_back(inferType(children[i]));
     }
 
-    IROperand dest = newTemp(IRType::UNKNOWN);
-    emit(IR_Call{ IRType::UNKNOWN, dest, funcName, args });
+    IRType retType = IRType::UNKNOWN;  // ← déclaré EN PREMIER
+
+    // Patche les types des params et re-propage le type de retour
+    for (auto& [decl, body] : program_.functions) {
+        if (decl.name != funcName) continue;
+
+        // Patch des paramètres
+        for (size_t j = 0; j < decl.params.size() && j < argTypes.size(); ++j) {
+            if (decl.params[j].first == IRType::UNKNOWN && argTypes[j] != IRType::UNKNOWN) {
+                decl.params[j].first = argTypes[j];
+                typeTable_[decl.params[j].second] = argTypes[j];
+            }
+        }
+
+        // Re-propage le type de retour depuis le corps si encore UNKNOWN
+        if (decl.returnType == IRType::UNKNOWN) {
+            for (const auto& instr : body.instructions) {
+                if (std::holds_alternative<IR_BinOp>(instr)) {
+                    const auto& b = std::get<IR_BinOp>(instr);
+                    if (b.type != IRType::UNKNOWN) {
+                        decl.returnType = b.type;
+                        break;
+                    }
+                }
+            }
+        }
+
+        retType = decl.returnType;  // récupère le type final (patché ou non)
+    }
+
+    IROperand dest = newTemp(retType);
+    emit(IR_Call{ retType, dest, funcName, args });
     return dest;
 }
 
@@ -589,7 +746,7 @@ std::string IRGenerator::instrToString(const IRInstruction& instr) const {
     }
     if (std::holds_alternative<IR_CondJump>(instr)) {
         const auto& j = std::get<IR_CondJump>(instr);
-        return "if (" + j.condition + ") goto " + j.labelTrue + "; else goto " + j.labelFalse + ";";
+        return "if (" + j.condition + ") goto " + j.labelTrue + " else goto " + j.labelFalse + ";";
     }
     if (std::holds_alternative<IR_Label>(instr)) {
         return std::get<IR_Label>(instr).name + ":";
