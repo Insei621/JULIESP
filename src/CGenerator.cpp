@@ -84,12 +84,11 @@ void CGenerator::emitPrologue(const IRProgram& program, std::ostream& out) {
 //
 
 void CGenerator::emitFunctions(const IRProgram& program, std::ostream& out) {
+    auto used = collectUsedFunctions(program);  // ← doit être LA PREMIÈRE ligne
+
     for (const auto& [decl, body] : program.functions) {
-        /*// Signature
-        // Si le type de retour est UNKNOWN, on met int par défaut
-        //IRType retType = decl.returnType;
-        //out << (retType == IRType::UNKNOWN ? "int" : irTypeToC(retType));*/
-        // Il était au départ prévu de typer dynamiquement les fonctions, mais je vais simplifier en typant en int à chaque fois
+        if (!used.count(decl.name)) continue;
+
         out << "int";
         out << " " << decl.name << "(";
 
@@ -105,14 +104,10 @@ void CGenerator::emitFunctions(const IRProgram& program, std::ostream& out) {
         }
 
         out << ") {\n";
-
-        // Corps du bloc
         emitBlock(body, out, 1);
-
         out << "}\n\n";
     }
 }
-
 // =============================================================================
 // SECTION 3 : Main
 // =============================================================================
@@ -142,18 +137,53 @@ void CGenerator::emitMain(const IRProgram& program, std::ostream& out) {
 //
 
 void CGenerator::emitBlock(const IR_Block& block, std::ostream& out, int indentLevel) {
-    auto decls = collectDecls(block);
-    if (!decls.empty()) {
-        for (const auto& [type, name] : decls) {
-            out << indent(indentLevel) << irTypeToC(type) << " " << name << ";\n";
+
+    // Calcule les variables vivantes
+    std::unordered_set<std::string> used;
+    for (const auto& instr : block.instructions) {
+        if (std::holds_alternative<IR_Assign>(instr)) {
+            const auto& a = std::get<IR_Assign>(instr);
+            if (!isLiteral(a.src)) used.insert(a.src);
         }
+        else if (std::holds_alternative<IR_BinOp>(instr)) {
+            const auto& b = std::get<IR_BinOp>(instr);
+            if (!isLiteral(b.left))  used.insert(b.left);
+            if (!isLiteral(b.right)) used.insert(b.right);
+        }
+        else if (std::holds_alternative<IR_Call>(instr)) {
+            for (const auto& arg : std::get<IR_Call>(instr).args)
+                if (!isLiteral(arg)) used.insert(arg);
+        }
+        else if (std::holds_alternative<IR_Print>(instr)) {
+            const auto& p = std::get<IR_Print>(instr);
+            if (!isLiteral(p.value)) used.insert(p.value);
+        }
+        else if (std::holds_alternative<IR_CondJump>(instr)) {
+            const auto& j = std::get<IR_CondJump>(instr);
+            if (!isLiteral(j.condition)) used.insert(j.condition);
+        }
+        else if (std::holds_alternative<IR_Return>(instr)) {
+            const auto& r = std::get<IR_Return>(instr);
+            if (!isLiteral(r.value)) used.insert(r.value);
+        }
+    }
+
+    // Déclarations filtrées
+    auto decls = collectDecls(block, used);  // ← passe used
+    if (!decls.empty()) {
+        for (const auto& [type, name] : decls)
+            out << indent(indentLevel) << irTypeToC(type) << " " << name << ";\n";
         out << "\n";
     }
 
+    // Instructions — filtre les assignations vers variables mortes
     const auto& instrs = block.instructions;
     size_t i = 0;
     while (i < instrs.size()) {
-        // Détecte le pattern if/else : CondJump suivi de Label
+        if (std::holds_alternative<IR_Assign>(instrs[i])) {
+            const auto& a = std::get<IR_Assign>(instrs[i]);
+            if (!used.count(a.dest)) { ++i; continue; }  // ← ignore si mort
+        }
         if (std::holds_alternative<IR_CondJump>(instrs[i])) {
             i = emitIfElse(instrs, i, out, indentLevel);
         } else {
@@ -233,15 +263,18 @@ size_t CGenerator::emitIfElse(const std::vector<IRInstruction>& instrs,
 // tout en évitant les doublons.
 //
 
-std::vector<std::pair<IRType, std::string>> CGenerator::collectDecls(const IR_Block& block) {
-    // ordered_map : nom → type (on garde le premier type vu)
+std::vector<std::pair<IRType, std::string>> CGenerator::collectDecls(
+    const IR_Block& block,
+    const std::unordered_set<std::string>& used) {
+
     std::vector<std::pair<IRType, std::string>> result;
     std::unordered_map<std::string, bool> seen;
 
     auto tryAdd = [&](IRType type, const std::string& name) {
         if (name.empty()) return;
-        if (isLiteral(name)) return;  // Pas de déclaration pour les constantes
-        if (seen.count(name)) return; // Déjà vue
+        if (isLiteral(name)) return;
+        if (seen.count(name)) return;
+        if (!used.count(name)) return;  // ← filtre les variables mortes
         seen[name] = true;
         result.push_back({ type, name });
     };
@@ -261,9 +294,7 @@ std::vector<std::pair<IRType, std::string>> CGenerator::collectDecls(const IR_Bl
         }
     }
     return result;
-}
-
-// =============================================================================
+}// =============================================================================
 // SECTION 6 : Traduction d'une instruction
 // =============================================================================
 //
@@ -439,4 +470,35 @@ std::string CGenerator::irTypeToC(IRType type) {
         case IRType::VOID:   return "void";
         default:             return "int"; // Sécurité : au pire, on met int
     }
+}
+
+std::unordered_set<std::string> CGenerator::collectUsedFunctions(const IRProgram& program) {
+    std::unordered_set<std::string> used;
+    std::queue<std::string> toVisit;
+
+    // Collecte les appels depuis main
+    for (const auto& instr : program.mainBlock.instructions) {
+        if (std::holds_alternative<IR_Call>(instr)) {
+            toVisit.push(std::get<IR_Call>(instr).funcName);
+        }
+    }
+
+    // Propagation transitive : si carre appelle autre chose, on l'inclut aussi
+    while (!toVisit.empty()) {
+        std::string fname = toVisit.front(); toVisit.pop();
+        if (used.count(fname)) continue;
+        used.insert(fname);
+
+        // Cherche les appels dans le corps de cette fonction
+        for (const auto& [decl, body] : program.functions) {
+            if (decl.name == fname) {
+                for (const auto& instr : body.instructions) {
+                    if (std::holds_alternative<IR_Call>(instr)) {
+                        toVisit.push(std::get<IR_Call>(instr).funcName);
+                    }
+                }
+            }
+        }
+    }
+    return used;
 }

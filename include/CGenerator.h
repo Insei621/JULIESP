@@ -65,8 +65,9 @@ private:
     // Retourne un vecteur (type, nom) pour chaque variable à déclarer.
     // On utilise un set pour éviter les doublons (un temporaire peut être dest
     // de plusieurs instructions — ex: dans les branches if).
-    std::vector<std::pair<IRType, std::string>> collectDecls(const IR_Block& block);
-
+    std::vector<std::pair<IRType, std::string>> collectDecls(
+        const IR_Block& block,
+        const std::unordered_set<std::string>& used);  // ← paramètre ajouté
     // =========================================================================
     // Utilitaires d'émission
     // =========================================================================
@@ -86,6 +87,8 @@ private:
     bool isLiteral(const std::string& name);
 
     std::string irTypeToC(IRType type);
+    std::unordered_set<std::string> collectUsedFunctions(const IRProgram& program);
+
 };
 
 #endif //COMPILATEUR_JULIESP_CGENERATOR_H

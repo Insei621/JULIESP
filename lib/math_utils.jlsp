@@ -6,3 +6,6 @@
 
 §§ Vérification si majeur (pour tester les booléens au passage)
 (: est_majeur (£ (age) (> age 17)))
+
+§§ Création d'une variable inutilisée pour voir si elle est bien enlevé du code c
+(: var_test 10)

@@ -26,7 +26,7 @@ std::string testCode = R"(
 
 (: mon_age 20)
 
-(? (est_majeur mon_age)
+(? ù        §§ (est_majeur mon_age)
    (;
      (€ "Vous êtes majeur.")
      (€ "Le carré de votre âge est :")

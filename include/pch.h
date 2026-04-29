@@ -21,6 +21,9 @@
 #include <unordered_map>
 #include <limits.h>
 #include <unistd.h>
+#include <unordered_set>
+#include <queue>
+#include <unordered_set>
 using namespace std;
 
 #ifndef COMPILATEUR_JULIESP_PCH_H
