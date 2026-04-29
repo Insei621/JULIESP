@@ -224,3 +224,41 @@ ASTNode* Parser::parseDefaultList(bool quoted) {
     return listNode;
 }
 
+std::string Parser::readFile(const std::string& path) {
+    // 1. On définit les endroits où chercher
+    std::vector<std::string> searchPaths = {
+        path,                        // Chemin brut (si l'utilisateur met un chemin absolu)
+        "./" + path,                 // Dossier courant
+        "../lib/" + path,            // Librairie (structure installée)
+        "./lib/" + path,             // Librairie (structure projet)
+    };
+
+    for (const std::string& fullPath : searchPaths) {
+        std::ifstream file(fullPath);
+        if (file.is_open()) {
+            // Si on trouve le fichier, on l'affiche en debug pour être sûr
+            std::cout << "\033[1;32m[Load]\033[0m Chargement de : " << fullPath << std::endl;
+            std::stringstream buffer;
+            buffer << file.rdbuf();
+            return buffer.str();
+        }
+    }
+
+    // 2. Si on arrive ici, c'est qu'on a tout fouillé sans succès
+    throw std::runtime_error("Impossible de trouver le fichier : " + path);
+}
+std::vector<ASTNode*> Parser::parseProgram() {
+    std::vector<ASTNode*> nodes;
+    while (!isAtEnd() && showNext().type != TokenType::END_OF_FILE) {
+        nodes.push_back(parseElement());
+    }
+    return nodes;
+}
+
+std::string Parser::getExecutablePath() {
+    char result[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    std::string fullPath = std::string(result, (count > 0) ? count : 0);
+    // On retire le nom du binaire pour avoir juste le dossier bin/ ou debug/
+    return fullPath.substr(0, fullPath.find_last_of("/\\"));
+}

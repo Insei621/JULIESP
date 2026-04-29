@@ -20,17 +20,17 @@ std::string testCode = R"(
 §§ main.jsp
 §§ Test de l'instruction LOAD
 
-($ "math_utils.jsp")
+($ "math_utils.jlsp")
 
 (€ "--- Test du Load ---")
 
-(: mon-age 20)
+(: mon_age 20)
 
-(? (est-majeur mon-age)
+(? (est_majeur mon_age)
    (;
      (€ "Vous êtes majeur.")
      (€ "Le carré de votre âge est :")
-     (€ (carre mon-age)))
+     (€ (carre mon_age)))
    (€ "Vous êtes mineur."))
         )";
 
@@ -46,9 +46,17 @@ inline void run_test() {
     Lexer lexer(testCode);
     std::vector<Token> tokens = lexer.tokenize();
 
-    // Parsing
+
     Parser parser(tokens);
-    ASTNode* root = parser.parse();
+    std::vector<ASTNode*> programNodes = parser.parseProgram();
+
+    // On crée une S-Expression "racine" qui contient tout le programme
+    SExpr* root = new SExpr(0, 0, false);
+    root->add(new Primitive("progn", 0, 0, false)); // On simule un (progn ...)
+
+    for (ASTNode* node : programNodes) {
+        root->add(node);
+    }
 
     /*PrettyPrinter printer;  // Impression de l'AST dans le terminal
     root->accept(&printer);

@@ -4,7 +4,7 @@
 
 #include "../include/pch.h"
 #include "../include/Parser.h"
-#include "../include/loadTools.h"
+#include "../include/Lexer.h"
 
 ASTNode* Parser::parseIf() {
     int l = showNext().line;
@@ -123,35 +123,30 @@ ASTNode* Parser::parseLoad() {
     int l = showNext().line;
     int c = showNext().cursor;
 
-    expect(TokenType::CORE_LOAD); // On consomme '$'
-    Token pathTok = expect(TokenType::LIT_STRING); // On récupère le nom du fichier
-    expect(TokenType::DEL_RBRACE); // On ferme la parenthèse du load ')'
+    expect(TokenType::CORE_LOAD);
 
-    // --- LE CŒUR DE LA LOGIQUE ---
+    Token pathTok = showNext();          // ← capture avant
+    expect(TokenType::LIT_STRING);       // ← puis consomme
+    expect(TokenType::DEL_RBRACE);
 
-    // A. Ouvrir et lire
+    // Lire le fichier
     std::string content = readFile(pathTok.value);
 
-    // B. Nouveau Lexer + nouveau Parser
+    // Lexer + Parser sur le contenu du fichier
     Lexer subLexer(content);
     std::vector<Token> subTokens = subLexer.tokenize();
     Parser subParser(subTokens);
-
-    // C. Récupérer l'AST du fichier chargé
     std::vector<ASTNode*> externalNodes = subParser.parseProgram();
 
-    // D. "Héritage" : On crée un nœud parent pour porter ces enfants
+    // Crée un nœud progn qui contient tout le fichier chargé
     SExpr* loadedContent = new SExpr(l, c, false);
-    loadedContent->add(new Primitive("progn", l, c, false)); // Indique qu'on exécute tout
-
+    loadedContent->add(new Primitive("progn", l, c, false));
     for (ASTNode* node : externalNodes) {
         loadedContent->add(node);
     }
 
-    // On renvoie ce bloc qui contient tout le fichier externe
     return loadedContent;
 }
-
 
 ASTNode* Parser::parsePrint() {
     int l = showNext().line;

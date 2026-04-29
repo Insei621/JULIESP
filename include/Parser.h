@@ -28,6 +28,7 @@ public:
     ASTNode* parse();
 
     friend int main(int argc, char** argv);      // pour les test j'ai besoin d'accéder au fonction du parser dansa le main
+    std::vector<ASTNode*> parseProgram();
 
 private:
     std::vector<Token> tokens;
@@ -56,6 +57,12 @@ private:
 
     /** @brief Vérifie si on a parcouru tous les tokens */
     bool isAtEnd() const;
+
+    // Utilitaires pour le load
+    std::string readFile(const std::string& path);
+
+    std::string getExecutablePath();
+
 };
 
 

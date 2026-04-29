@@ -4,7 +4,7 @@
 - setq          -> :
 - lambda        -> £    // le type de retour d'une fonction lambda est toujours un int
 - progn         -> ;
-- load          -> $
+- load          -> $        //ne marchera que sur linux
 - print         -> €
 - scanf         -> ç
 

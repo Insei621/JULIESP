@@ -5,4 +5,4 @@
 (: carre (£ (n) (* n n)))
 
 §§ Vérification si majeur (pour tester les booléens au passage)
-(: est-majeur (£ (age) (> age 17)))
+(: est_majeur (£ (age) (> age 17)))

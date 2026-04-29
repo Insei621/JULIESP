@@ -19,7 +19,8 @@
 #include <filesystem>
 #include <cstdlib> // Pour system()
 #include <unordered_map>
-#include <fstream>
+#include <limits.h>
+#include <unistd.h>
 using namespace std;
 
 #ifndef COMPILATEUR_JULIESP_PCH_H
