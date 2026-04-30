@@ -1,0 +1,35 @@
+§§ test_02_arithmetique.jlsp
+§§ Test des opérations arithmétiques
+
+(: a 20)
+(: b 7)
+
+§§ Addition
+(: somme (+ a b))
+(€ "a + b =")
+(€ somme)
+
+§§ Soustraction
+(: diff (- a b))
+(€ "a - b =")
+(€ diff)
+
+§§ Multiplication
+(: prod (* a b))
+(€ "a * b =")
+(€ prod)
+
+§§ Division
+(: quot (/ a b))
+(€ "a / b =")
+(€ quot)
+
+§§ Opérations imbriquées : (a + b) * (a - b)
+(: res (* (+ a b) (- a b)))
+(€ "(a+b)*(a-b) =")
+(€ res)
+
+§§ Chaîne d'additions : 1 + 2 + 3 + 4
+(: chaine (+ 1 2 3 4))
+(€ "1+2+3+4 =")
+(€ chaine)

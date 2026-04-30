@@ -1,0 +1,26 @@
+§§ test_01_variables.jlsp
+§§ Test des variables et assignations de base
+
+§§ Entiers
+(: x 42)
+(: y 10)
+(€ x)
+(€ y)
+
+§§ Flottants
+(: pi 3.14)
+(€ pi)
+
+§§ Chaînes
+(: msg "Bonjour JuliesSP")
+(€ msg)
+
+§§ Booléens
+(: vrai µ)
+(: faux ù)
+(€ vrai)
+(€ faux)
+
+§§ Réassignation
+(: x 100)
+(€ x)

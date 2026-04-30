@@ -1,0 +1,21 @@
+§§ test_07_load.jlsp
+§§ Test du chargement de fichier externe ($)
+
+($ "lib/math_lib.jlsp")
+
+(€ "=== Test du Load ===")
+
+(€ "carre(6) =")
+(€ (carre 6))
+
+(€ "cube(3) =")
+(€ (cube 3))
+
+(€ "abs_val(-5) =")
+(€ (abs_val -5))
+
+(€ "est_positif(10) =")
+(€ (est_positif 10))
+
+(€ "est_positif(-3) =")
+(€ (est_positif -3))

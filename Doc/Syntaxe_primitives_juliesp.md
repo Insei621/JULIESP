@@ -6,7 +6,7 @@
 - progn         -> ;
 - load          -> $        //ne marchera que sur linux
 - print         -> €
-- scanf         -> ç
+- scanf         -> ç   // penser à déclarer la variable avant de l'appeler, stocke des int
 
 # Les Mains (Primitives de Listes) :
 - car           -> <<

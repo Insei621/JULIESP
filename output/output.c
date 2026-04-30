@@ -5,26 +5,30 @@
 #include <string.h>
 #include "lisp_runtime.h"
 
-int carre(int n) {
-    int t0;
-
-    t0 = n * n;
-    return t0;
+int afficher_infos(char* nom, int age) {
+    printf("%s\n", "Nom :");
+    printf("%d\n", nom);
+    printf("%s\n", "Age :");
+    printf("%d\n", age);
 }
 
 int main(void) {
-    int mon_age;
-    int t3;
+    int score;
+    int t0;
 
-    printf("%s\n", "--- Test du Load ---");
-    mon_age = 20;
-    if (0) {
-        printf("%s\n", "Vous êtes majeur.");
-        printf("%s\n", "Le carré de votre âge est :");
-        t3 = carre(mon_age);
-        printf("%d\n", t3);
+    printf("%s\n", "Etape 1");
+    printf("%s\n", "Etape 2");
+    printf("%s\n", "Etape 3");
+    score = 75;
+    t0 = score > 50;
+    if (t0) {
+        printf("%s\n", "Score suffisant :");
+        printf("%d\n", score);
+        printf("%s\n", "Vous avez reussi.");
     } else {
-        printf("%s\n", "Vous êtes mineur.");
+        printf("%s\n", "Score insuffisant.");
     }
+    t2 = afficher_infos("Alice", 30);
+    t3 = afficher_infos("Bob", 25);
     return 0;
 }

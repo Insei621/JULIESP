@@ -17,22 +17,36 @@
  * Affichage lisible des TokenType
  */
 std::string testCode = R"(
-§§ main.jsp
-§§ Test de l'instruction LOAD
+§§ test_05_progn.jlsp
+§§ Test du progn (séquence d'expressions)
 
-($ "math_utils.jlsp")
+§§ Progn simple : exécute plusieurs instructions dans l'ordre
+(;
+    (€ "Etape 1")
+    (€ "Etape 2")
+    (€ "Etape 3"))
 
-(€ "--- Test du Load ---")
-
-(: mon_age 20)
-
-(? ù        §§ (est_majeur mon_age)
+§§ Progn dans un if : branche then avec plusieurs instructions
+(: score 75)
+(? (> score 50)
    (;
-     (€ "Vous êtes majeur.")
-     (€ "Le carré de votre âge est :")
-     (€ (carre mon_age)))
-   (€ "Vous êtes mineur."))
-        )";
+       (€ "Score suffisant :")
+       (€ score)
+       (€ "Vous avez reussi."))
+   (€ "Score insuffisant."))
+
+§§ Progn dans un lambda
+(: afficher_infos (£ (nom age)
+    (;
+        (€ "Nom :")
+        (€ nom)
+        (€ "Age :")
+        (€ age))))
+
+(afficher_infos "Alice" 30)
+(afficher_infos "Bob" 25)
+
+)";
 
 
 /**

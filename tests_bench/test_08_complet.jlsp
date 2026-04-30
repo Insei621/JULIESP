@@ -1,0 +1,60 @@
+§§ test_08_complet.jlsp
+§§ Test intégration : combine variables, fonctions, conditions, progn
+
+§§ --- Fonctions utilitaires ---
+(: min2 (£ (a b) (? (< a b) a b)))
+(: max2 (£ (a b) (? (> a b) a b)))
+(: clamp (£ (val lo hi)
+    (max2 lo (min2 val hi))))
+
+§§ --- Fonction de classification ---
+(: classifier (£ (n)
+    (? (< n 0)
+       (€ "negatif")
+       (? (= n 0)
+          (€ "zero")
+          (€ "positif")))))
+
+§§ --- Programme principal ---
+(€ "=== Tests min/max ===")
+(€ "min(3 8) =")
+(€ (min2 3 8))
+(€ "max(3 8) =")
+(€ (max2 3 8))
+
+(€ "=== Test clamp ===")
+§§ clamp(15, 0, 10) doit donner 10
+(: c1 (clamp 15 0 10))
+(€ "clamp(15, 0, 10) =")
+(€ c1)
+
+§§ clamp(5, 0, 10) doit donner 5
+(: c2 (clamp 5 0 10))
+(€ "clamp(5, 0, 10) =")
+(€ c2)
+
+§§ clamp(-3, 0, 10) doit donner 0
+(: c3 (clamp -3 0 10))
+(€ "clamp(-3, 0, 10) =")
+(€ c3)
+
+(€ "=== Classification ===")
+(classifier -5)
+(classifier 0)
+(classifier 42)
+
+§§ --- Test avec saisie ---
+(€ "=== Saisie interactive ===")
+(: n 0)
+(€ "Entrez un entier :")
+(ç n)
+(€ "Votre nombre :")
+(€ n)
+(€ "Son carre :")
+(: sq (£ (x) (* x x)))
+(€ (sq n))
+(? (> n 0)
+   (€ "C est un nombre positif.")
+   (? (= n 0)
+      (€ "C est zero.")
+      (€ "C est un nombre negatif.")))

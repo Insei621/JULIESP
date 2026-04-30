@@ -1,0 +1,28 @@
+§§ test_05_progn.jlsp
+§§ Test du progn (séquence d'expressions)
+
+§§ Progn simple : exécute plusieurs instructions dans l'ordre
+(; 
+    (€ "Etape 1")
+    (€ "Etape 2")
+    (€ "Etape 3"))
+
+§§ Progn dans un if : branche then avec plusieurs instructions
+(: score 75)
+(? (> score 50)
+   (;
+       (€ "Score suffisant :")
+       (€ score)
+       (€ "Vous avez reussi."))
+   (€ "Score insuffisant."))
+
+§§ Progn dans un lambda
+(: afficher_infos (£ (nom age)
+    (;
+        (€ "Nom :")
+        (€ nom)
+        (€ "Age :")
+        (€ age))))
+
+(afficher_infos "Alice" 30)
+(afficher_infos "Bob" 25)

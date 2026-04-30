@@ -1,0 +1,38 @@
+§§ test_03_conditions.jlsp
+§§ Test des comparaisons et du if
+
+(: x 15)
+(: y 10)
+
+§§ Test > vrai
+(? (> x y)
+   (€ "x est plus grand que y")
+   (€ "x est plus petit ou egal a y"))
+
+§§ Test > faux
+(? (> y x)
+   (€ "y est plus grand que x")
+   (€ "y est plus petit ou egal a x"))
+
+§§ Test =
+(? (= x 15)
+   (€ "x vaut bien 15")
+   (€ "x ne vaut pas 15"))
+
+§§ Test < avec littéraux
+(? (< 3 10)
+   (€ "3 < 10 : vrai")
+   (€ "3 < 10 : faux"))
+
+§§ If sans branche else (branche nil)
+(: age 17)
+(? (> age 18)
+   (€ "majeur"))
+
+§§ If imbriqués
+(: note 85)
+(? (> note 90)
+   (€ "Excellent")
+   (? (> note 70)
+      (€ "Bien")
+      (€ "A ameliorer")))

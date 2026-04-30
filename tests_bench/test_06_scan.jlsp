@@ -1,0 +1,26 @@
+§§ test_06_scan.jlsp
+§§ Test de la saisie utilisateur (ç)
+§§ Note : ç stocke des int uniquement
+
+§§ Saisie simple
+(: nombre 0)
+(€ "Entrez un nombre entier :")
+(ç nombre)
+(€ "Vous avez saisi :")
+(€ nombre)
+
+§§ Saisie et calcul
+(: val 0)
+(€ "Entrez une valeur :")
+(ç val)
+(: double (* val 2))
+(€ "Le double est :")
+(€ double)
+
+§§ Saisie et condition
+(: age 0)
+(€ "Entrez votre age :")
+(ç age)
+(? (> age 17)
+   (€ "Vous etes majeur.")
+   (€ "Vous etes mineur."))

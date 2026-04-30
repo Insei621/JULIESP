@@ -196,57 +196,71 @@ void CGenerator::emitBlock(const IR_Block& block, std::ostream& out, int indentL
 size_t CGenerator::emitIfElse(const std::vector<IRInstruction>& instrs,
                                size_t i, std::ostream& out, int indentLevel) {
     const auto& cj = std::get<IR_CondJump>(instrs[i]);
-    std::string labelThen = cj.labelTrue;
     std::string labelElse = cj.labelFalse;
+    std::string labelEnd;
     ++i;
 
-    // Collecte les instructions de la branche THEN (jusqu'au IR_Jump)
-    std::vector<IRInstruction> thenInstrs;
     // Saute le label then
     if (i < instrs.size() && std::holds_alternative<IR_Label>(instrs[i])) ++i;
-    while (i < instrs.size() && !std::holds_alternative<IR_Jump>(instrs[i])) {
-        // Ne pas inclure les IR_Assign vides (résultat void)
-        if (std::holds_alternative<IR_Assign>(instrs[i])) {
-            const auto& a = std::get<IR_Assign>(instrs[i]);
-            if (!a.src.empty()) thenInstrs.push_back(instrs[i]);
-        } else {
-            thenInstrs.push_back(instrs[i]);
-        }
-        ++i;
-    }
-    if (i < instrs.size()) ++i; // Saute le IR_Jump
 
-    // Collecte les instructions de la branche ELSE (jusqu'au label de fin)
-    std::vector<IRInstruction> elseInstrs;
-    // Saute le label else
-    if (i < instrs.size() && std::holds_alternative<IR_Label>(instrs[i])) ++i;
-    while (i < instrs.size() && !std::holds_alternative<IR_Label>(instrs[i])) {
-        if (std::holds_alternative<IR_Assign>(instrs[i])) {
-            const auto& a = std::get<IR_Assign>(instrs[i]);
-            if (!a.src.empty()) elseInstrs.push_back(instrs[i]);
-        } else {
-            elseInstrs.push_back(instrs[i]);
-        }
-        ++i;
-    }
-    if (i < instrs.size()) ++i; // Saute le label de fin
-
-    // Émet le if/else C
+    // --- Émet la branche THEN directement ---
     out << indent(indentLevel) << "if (" << cj.condition << ") {\n";
-    for (const auto& instr : thenInstrs)
-        emitInstruction(instr, out, indentLevel + 1);
+    while (i < instrs.size() && !std::holds_alternative<IR_Jump>(instrs[i])) {
+        if (std::holds_alternative<IR_CondJump>(instrs[i])) {
+            i = emitIfElse(instrs, i, out, indentLevel + 1);
+        } else if (std::holds_alternative<IR_Assign>(instrs[i])) {
+            const auto& a = std::get<IR_Assign>(instrs[i]);
+            if (!a.src.empty()) emitInstruction(instrs[i], out, indentLevel + 1);
+            ++i;
+        } else {
+            emitInstruction(instrs[i], out, indentLevel + 1);
+            ++i;
+        }
+    }
+    if (i < instrs.size()) {
+        labelEnd = std::get<IR_Jump>(instrs[i]).label; // récupère le label de fin
+        ++i; // saute le IR_Jump
+    }
     out << indent(indentLevel) << "}";
 
-    if (!elseInstrs.empty()) {
+    // Saute le label else
+    if (i < instrs.size() && std::holds_alternative<IR_Label>(instrs[i])) ++i;
+
+    // --- Vérifie si la branche else est vide ---
+    // Elle est vide si on tombe directement sur le label de fin
+    bool elseEmpty = (i < instrs.size() &&
+                      std::holds_alternative<IR_Label>(instrs[i]) &&
+                      std::get<IR_Label>(instrs[i]).name == labelEnd);
+
+    if (!elseEmpty) {
         out << " else {\n";
-        for (const auto& instr : elseInstrs)
-            emitInstruction(instr, out, indentLevel + 1);
+        // Émet la branche ELSE jusqu'au label de fin
+        while (i < instrs.size()) {
+            // Stop si on atteint le label de fin
+            if (std::holds_alternative<IR_Label>(instrs[i]) &&
+                std::get<IR_Label>(instrs[i]).name == labelEnd) break;
+
+            if (std::holds_alternative<IR_CondJump>(instrs[i])) {
+                i = emitIfElse(instrs, i, out, indentLevel + 1);
+            } else if (std::holds_alternative<IR_Assign>(instrs[i])) {
+                const auto& a = std::get<IR_Assign>(instrs[i]);
+                if (!a.src.empty()) emitInstruction(instrs[i], out, indentLevel + 1);
+                ++i;
+            } else {
+                emitInstruction(instrs[i], out, indentLevel + 1);
+                ++i;
+            }
+        }
         out << indent(indentLevel) << "}";
     }
     out << "\n";
 
+    // Saute le label de fin
+    if (i < instrs.size() && std::holds_alternative<IR_Label>(instrs[i])) ++i;
+
     return i;
 }
+
 // =============================================================================
 // SECTION 5 : Collecte des déclarations
 // =============================================================================

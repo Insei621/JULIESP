@@ -1,0 +1,37 @@
+§§ test_04_lambda.jlsp
+§§ Test des fonctions lambda
+
+§§ Fonction simple : carré
+(: carre (£ (n) (* n n)))
+(€ "carre(5) =")
+(€ (carre 5))
+(€ "carre(12) =")
+(€ (carre 12))
+
+§§ Fonction avec deux paramètres : addition
+(: additionner (£ (a b) (+ a b)))
+(€ "additionner(3 4) =")
+(€ (additionner 3 4))
+
+§§ Fonction avec deux paramètres : max
+(: mon_max (£ (a b)
+    (? (> a b) a b)))
+(€ "max(8 3) =")
+(€ (mon_max 8 3))
+(€ "max(2 9) =")
+(€ (mon_max 2 9))
+
+§§ Fonction composée : cube = n * carre(n)
+(: cube (£ (n) (* n (carre n))))
+(€ "cube(3) =")
+(€ (cube 3))
+(€ "cube(4) =")
+(€ (cube 4))
+
+§§ Fonction avec comparaison : est-il pair ?
+(: est_pair (£ (n)
+    (= (- n (* (/ n 2) 2)) 0)))
+(€ "est_pair(4) =")
+(€ (est_pair 4))
+(€ "est_pair(7) =")
+(€ (est_pair 7))

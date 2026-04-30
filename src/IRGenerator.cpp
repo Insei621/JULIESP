@@ -282,62 +282,14 @@ void IRGenerator::visit(SExpr* node) {
 //   t_result = t_else
 //   L_end_N:
 //
-/*
-IROperand IRGenerator::handleIf(SExpr* node) {
-    const auto& children = node->getChildren();
-    // children[0] = "if", children[1] = cond, children[2] = then, children[3] = else?
 
-    // Génère les labels uniques pour ce if
-    std::string labelThen = newLabel("L_then");
-    std::string labelElse = newLabel("L_else");
-    std::string labelEnd  = newLabel("L_end");
-
-    // --- Évalue la condition ---
-    children[1]->accept(this);
-    IROperand condResult = lastResult_;
-
-    // --- Saut conditionnel ---
-    emit(IR_CondJump{ condResult, labelThen, labelElse });
-
-    // --- Branche THEN ---
-    emit(IR_Label{ labelThen });
-    children[2]->accept(this);
-    IROperand thenResult = lastResult_;
-
-    // On stocke le résultat dans un temporaire commun
-    IROperand result = newTemp(IRType::UNKNOWN);
-    if (!thenResult.empty()) {
-        emit(IR_Assign{ IRType::UNKNOWN, result, thenResult });
-    }
-    emit(IR_Jump{ labelEnd });
-    // branche else
-    emit(IR_Label{ labelElse });
-    if (children.size() >= 4) {
-        children[3]->accept(this);
-        IROperand elseResult = lastResult_;
-        if (!elseResult.empty()) {
-            emit(IR_Assign{ IRType::UNKNOWN, result, elseResult });
-        }
-    }
-
-    emit(IR_Label{ labelEnd });
-
-    return result;
-    return result;
-}
-*/
 IROperand IRGenerator::handleIf(SExpr* node) {
     const auto& children = node->getChildren();
 
-    // Évalue la condition dans un temporaire
     children[1]->accept(this);
     IROperand condResult = lastResult_;
-    IRType condType = inferType(children[1]);
 
-    // Temporaire pour stocker le résultat (si les branches retournent une valeur)
     IROperand result = newTemp(IRType::UNKNOWN);
-
-    // Émet : if (cond) goto L_then; else goto L_else;
     std::string labelThen = newLabel("L_then");
     std::string labelElse = newLabel("L_else");
     std::string labelEnd  = newLabel("L_end");
@@ -356,19 +308,23 @@ IROperand IRGenerator::handleIf(SExpr* node) {
     // Branche ELSE
     emit(IR_Label{ labelElse });
     if (children.size() >= 4) {
-        children[3]->accept(this);
-        IROperand elseResult = lastResult_;
-        if (!elseResult.empty()) {
-            emit(IR_Assign{ IRType::UNKNOWN, result, elseResult });
+        // Vérifie que ce n'est pas un nil placeholder
+        bool isNil = false;
+        if (auto* id = dynamic_cast<Identifier*>(children[3])) {
+            isNil = (id->getName() == "nil");
+        }
+        if (!isNil) {
+            children[3]->accept(this);
+            IROperand elseResult = lastResult_;
+            if (!elseResult.empty()) {
+                emit(IR_Assign{ IRType::UNKNOWN, result, elseResult });
+            }
         }
     }
 
-    // Label de fin — toujours émis
     emit(IR_Label{ labelEnd });
-
     return result;
 }
-
 // -----------------------------------------------------------------------------
 // handleSetq : (setq name value)
 // -----------------------------------------------------------------------------
