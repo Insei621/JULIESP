@@ -1,0 +1,47 @@
+§§ test_09_listes.jlsp
+§§ Test des primitives de listes : <<, >>, &, |, @
+
+§§ --- Construction de listes avec & (cons) ---
+§§ Construit la liste (1 . 2)
+(: paire (& 1 2))
+(€ "Paire construite avec & :")
+(€ paire)
+
+§§ Construit la liste (10 . (20 . (30 . nil)))
+(: lst (& 10 (& 20 (& 30 ²()))))
+(€ "Liste construite :")
+(€ lst)
+
+§§ --- Accès avec << (car) et >> (cdr) ---
+(: ma_liste (& 42 (& 99 ²())))
+(€ "Premier element (<<) :")
+(€ (<< ma_liste))
+
+(€ "Reste de la liste (>>) :")
+(€ (>> ma_liste))
+
+(€ "Deuxieme element (<< (>> liste)) :")
+(€ (<< (>> ma_liste)))
+
+§§ --- Test | (null?) ---
+(€ "=== Test null? (|) ===")
+
+(: liste_vide ²())
+(? (| liste_vide)
+   (€ "La liste est vide : vrai")
+   (€ "La liste est vide : faux"))
+
+(? (| ma_liste)
+   (€ "ma_liste est vide : vrai")
+   (€ "ma_liste est vide : faux"))
+
+§§ --- Test @ (atom?) ---
+(€ "=== Test atom? (@) ===")
+
+(? (@ 42)
+   (€ "42 est un atome : vrai")
+   (€ "42 est un atome : faux"))
+
+(? (@ ma_liste)
+   (€ "ma_liste est un atome : vrai")
+   (€ "ma_liste est un atome : faux"))

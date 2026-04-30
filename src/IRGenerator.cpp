@@ -289,7 +289,6 @@ IROperand IRGenerator::handleIf(SExpr* node) {
     children[1]->accept(this);
     IROperand condResult = lastResult_;
 
-    IROperand result = newTemp(IRType::UNKNOWN);
     std::string labelThen = newLabel("L_then");
     std::string labelElse = newLabel("L_else");
     std::string labelEnd  = newLabel("L_end");
@@ -300,42 +299,35 @@ IROperand IRGenerator::handleIf(SExpr* node) {
     emit(IR_Label{ labelThen });
     children[2]->accept(this);
     IROperand thenResult = lastResult_;
-    if (!thenResult.empty()) {
-        emit(IR_Assign{ IRType::UNKNOWN, result, thenResult });
-    }
     emit(IR_Jump{ labelEnd });
 
     // Branche ELSE
     emit(IR_Label{ labelElse });
+    IROperand elseResult = "";
     if (children.size() >= 4) {
-        // Vérifie que ce n'est pas un nil placeholder
         bool isNil = false;
-        if (auto* id = dynamic_cast<Identifier*>(children[3])) {
+        if (auto* id = dynamic_cast<Identifier*>(children[3]))
             isNil = (id->getName() == "nil");
-        }
         if (!isNil) {
             children[3]->accept(this);
-            IROperand elseResult = lastResult_;
-            if (!elseResult.empty()) {
-                emit(IR_Assign{ IRType::UNKNOWN, result, elseResult });
-            }
+            elseResult = lastResult_;
         }
     }
 
     emit(IR_Label{ labelEnd });
-    return result;
+
+    // Ne crée un temporaire que si les branches retournent une vraie valeur
+    if (!thenResult.empty() && !elseResult.empty()) {
+        IROperand result = newTemp(IRType::UNKNOWN);
+        // Insère les assignations AVANT les labels (dans le bon ordre)
+        // On les émet juste avant le jump et avant le label de fin
+        // → En pratique : retourne thenResult (le CGenerator choisira)
+        return thenResult; // la valeur du then (utilisée si le if est une expr)
+    }
+
+    return ""; // void si les branches ne retournent rien
 }
-// -----------------------------------------------------------------------------
-// handleSetq : (setq name value)
-// -----------------------------------------------------------------------------
-//
-// Exemple :
-//   (setq x 42)
-//   → int x = 42;
-//   (setq x (+ x 1))
-//   → t0 = x + 1;
-//      x = t0;
-//
+
 
 IROperand IRGenerator::handleSetq(SExpr* node) {
     const auto& children = node->getChildren();
@@ -401,48 +393,72 @@ IROperand IRGenerator::handleLambda(SExpr* node) {
 // Dans IRGenerator.cpp — même logique que handleLambda mais avec nom imposé
 IROperand IRGenerator::handleLambdaWithName(SExpr* node, const std::string& name) {
     const auto& children = node->getChildren();
-    std::string funcName = newFuncName(name);  // utilise "add" au lieu de "__fn0"
+    std::string funcName = newFuncName(name);
 
+    // --- Collecte les paramètres ---
     std::vector<std::pair<IRType, std::string>> params;
     if (auto* paramList = dynamic_cast<SExpr*>(children[1])) {
         for (ASTNode* p : paramList->getChildren()) {
             std::string pname = p->getName();
             std::replace(pname.begin(), pname.end(), '-', '_');
-            params.push_back({ IRType::UNKNOWN, pname }); // type inconnu pour l'instant
+            params.push_back({ IRType::UNKNOWN, pname });
         }
     }
 
-    // --- Crée la déclaration de fonction ---
+    // --- Crée la déclaration ---
     IR_FuncDecl decl;
     decl.returnType = IRType::UNKNOWN;
     decl.name       = funcName;
     decl.params     = params;
 
-
-    // Enregistre les paramètres dans typeTable_ pour que le corps puisse les utiliser
-    for (const auto& [ptype, pname] : params) {
-        typeTable_[pname] = ptype; // UNKNOWN au départ, patché plus tard par handleCall
-    }
-
     // --- Crée le bloc du corps ---
     IR_Block bodyBlock;
     bodyBlock.name = funcName;
+
+    // --- Enregistre les paramètres dans typeTable_ avant de générer le corps ---
+    for (const auto& [ptype, pname] : params) {
+        typeTable_[pname] = ptype; // UNKNOWN au départ, patché plus tard par handleCall
+    }
 
     // --- Sauvegarde le bloc courant et bascule sur le corps ---
     IR_Block* savedBlock = currentBlock_;
     currentBlock_ = &bodyBlock;
 
-    // --- Génère le corps (toutes les expressions) ---
+    // --- Génère le corps ---
     IROperand lastBodyResult = "";
     for (size_t i = 2; i < children.size(); ++i) {
         children[i]->accept(this);
         lastBodyResult = lastResult_;
     }
 
-    // La dernière expression est la valeur de retour
+    // --- Émet le return seulement si la dernière expression retourne une valeur ---
     if (!lastBodyResult.empty()) {
+        // Déduit le type de retour
+        IRType retType = IRType::UNKNOWN;
+        auto it = typeTable_.find(lastBodyResult);
+        if (it != typeTable_.end() && it->second != IRType::UNKNOWN) {
+            retType = it->second;
+        } else {
+            // Cherche dans les BinOp du corps
+            for (const auto& instr : bodyBlock.instructions) {
+                if (std::holds_alternative<IR_BinOp>(instr)) {
+                    const auto& b = std::get<IR_BinOp>(instr);
+                    if (b.dest == lastBodyResult && b.type != IRType::UNKNOWN) {
+                        retType = b.type; break;
+                    }
+                }
+                if (std::holds_alternative<IR_Call>(instr)) {
+                    const auto& c = std::get<IR_Call>(instr);
+                    if (c.dest == lastBodyResult && c.type != IRType::UNKNOWN) {
+                        retType = c.type; break;
+                    }
+                }
+            }
+        }
+        decl.returnType = retType;
         emit(IR_Return{ lastBodyResult });
     }
+    // Si lastBodyResult est vide → fonction void, pas de return
 
     // --- Restaure le bloc courant ---
     currentBlock_ = savedBlock;
@@ -450,33 +466,9 @@ IROperand IRGenerator::handleLambdaWithName(SExpr* node, const std::string& name
     // --- Enregistre la fonction dans le programme ---
     program_.functions.emplace_back(decl, std::move(bodyBlock));
 
-    // Déduit le type de retour depuis la dernière instruction return du corps
-    IRType retType = IRType::UNKNOWN;
-    for (const auto& instr : bodyBlock.instructions) {
-        if (std::holds_alternative<IR_Return>(instr)) {
-            const std::string& retVal = std::get<IR_Return>(instr).value;
-            auto it = typeTable_.find(retVal);
-            if (it != typeTable_.end() && it->second != IRType::UNKNOWN) {
-                retType = it->second;
-            } else {
-                // Le retval est peut-être un temporaire — cherche dans les BinOp du bloc
-                for (const auto& i2 : bodyBlock.instructions) {
-                    if (std::holds_alternative<IR_BinOp>(i2)) {
-                        const auto& b = std::get<IR_BinOp>(i2);
-                        if (b.dest == retVal && b.type != IRType::UNKNOWN) {
-                            retType = b.type; break;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    decl.returnType = retType;
+    // Enregistre le type de retour dans typeTable_ pour handleCall
+    typeTable_[funcName] = decl.returnType;
 
-    // Enregistre aussi dans typeTable_ pour que handleCall puisse le trouver
-    typeTable_[funcName] = retType;
-
-    // Retourne le nom de la fonction (utile pour setq)
     lastResult_ = funcName;
     return funcName;
 }

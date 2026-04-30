@@ -1,0 +1,62 @@
+§§ test_10_listes_fonctions.jlsp
+§§ Test des listes dans des fonctions
+
+§§ --- Fonction : premier élément ---
+(: premier (£ (lst) (<< lst)))
+
+§§ --- Fonction : deuxième élément ---
+(: deuxieme (£ (lst) (<< (>> lst))))
+
+§§ --- Fonction : troisième élément ---
+(: troisieme (£ (lst) (<< (>> (>> lst)))))
+
+§§ --- Fonction : construire une paire et lire ses éléments ---
+(: fst (£ (paire) (<< paire)))
+(: snd (£ (paire) (<< (>> paire))))
+
+§§ --- Fonction : liste est-elle un atome ou une paire ? ---
+(: describe (£ (x)
+    (? (@ x)
+       (€ "C est un atome")
+       (€ "C est une liste"))))
+
+§§ --- Fonction : liste est-elle vide ? ---
+(: est_vide (£ (lst)
+    (? (| lst)
+       (€ "Liste vide")
+       (€ "Liste non vide"))))
+
+§§ --- Programme principal ---
+(: nums (& 10 (& 20 (& 30 ²()))))
+
+(€ "=== Accès par position ===")
+(€ "Element 1 :")
+(€ (premier nums))
+(€ "Element 2 :")
+(€ (deuxieme nums))
+(€ "Element 3 :")
+(€ (troisieme nums))
+
+(€ "=== Test paires ===")
+(: p (& 100 200))
+(€ "fst(p) =")
+(€ (fst p))
+(€ "snd(p) =")
+(€ (snd p))
+
+(€ "=== Atom? et null? dans fonctions ===")
+(describe 42)
+(describe nums)
+(est_vide ²())
+(est_vide nums)
+
+§§ --- Test enchaînement cons ---
+(€ "=== Construction et déconstruction ===")
+(: a 1)
+(: b 2)
+(: c 3)
+(: liste3 (& a (& b (& c ²()))))
+(€ "Liste (a b c), tete :")
+(€ (<< liste3))
+(€ "Queue de la liste, tete :")
+(€ (<< (>> liste3)))

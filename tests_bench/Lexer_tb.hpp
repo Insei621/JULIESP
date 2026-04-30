@@ -17,27 +17,68 @@
  * Affichage lisible des TokenType
  */
 std::string testCode = R"(
-§§ test_07_load.jlsp
-§§ Test du chargement de fichier externe ($)
+§§ test_10_listes_fonctions.jlsp
+§§ Test des listes dans des fonctions
 
-($ "lib/math_lib.jlsp")
+§§ --- Fonction : premier élément ---
+(: premier (£ (lst) (<< lst)))
 
-(€ "=== Test du Load ===")
+§§ --- Fonction : deuxième élément ---
+(: deuxieme (£ (lst) (<< (>> lst))))
 
-(€ "carre(6) =")
-(€ (carre 6))
+§§ --- Fonction : troisième élément ---
+(: troisieme (£ (lst) (<< (>> (>> lst)))))
 
-(€ "cube(3) =")
-(€ (cube 3))
+§§ --- Fonction : construire une paire et lire ses éléments ---
+(: fst (£ (paire) (<< paire)))
+(: snd (£ (paire) (<< (>> paire))))
 
-(€ "abs_val(-5) =")
-(€ (abs_val -5))
+§§ --- Fonction : liste est-elle un atome ou une paire ? ---
+(: describe (£ (x)
+    (? (@ x)
+       (€ "C est un atome")
+       (€ "C est une liste"))))
 
-(€ "est_positif(10) =")
-(€ (est_positif 10))
+§§ --- Fonction : liste est-elle vide ? ---
+(: est_vide (£ (lst)
+    (? (| lst)
+       (€ "Liste vide")
+       (€ "Liste non vide"))))
 
-(€ "est_positif(-3) =")
-(€ (est_positif -3))
+§§ --- Programme principal ---
+(: nums (& 10 (& 20 (& 30 ²()))))
+
+(€ "=== Accès par position ===")
+(€ "Element 1 :")
+(€ (premier nums))
+(€ "Element 2 :")
+(€ (deuxieme nums))
+(€ "Element 3 :")
+(€ (troisieme nums))
+
+(€ "=== Test paires ===")
+(: p (& 100 200))
+(€ "fst(p) =")
+(€ (fst p))
+(€ "snd(p) =")
+(€ (snd p))
+
+(€ "=== Atom? et null? dans fonctions ===")
+(describe 42)
+(describe nums)
+(est_vide ²())
+(est_vide nums)
+
+§§ --- Test enchaînement cons ---
+(€ "=== Construction et déconstruction ===")
+(: a 1)
+(: b 2)
+(: c 3)
+(: liste3 (& a (& b (& c ²()))))
+(€ "Liste (a b c), tete :")
+(€ (<< liste3))
+(€ "Queue de la liste, tete :")
+(€ (<< (>> liste3)))
 
 )";
 
