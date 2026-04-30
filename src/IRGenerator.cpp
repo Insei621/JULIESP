@@ -418,6 +418,7 @@ IROperand IRGenerator::handleLambdaWithName(SExpr* node, const std::string& name
     decl.name       = funcName;
     decl.params     = params;
 
+
     // Enregistre les paramètres dans typeTable_ pour que le corps puisse les utiliser
     for (const auto& [ptype, pname] : params) {
         typeTable_[pname] = ptype; // UNKNOWN au départ, patché plus tard par handleCall
@@ -504,12 +505,20 @@ IROperand IRGenerator::handleProgn(SExpr* node) {
 
 IROperand IRGenerator::handlePrint(SExpr* node) {
     const auto& children = node->getChildren();
-    // Évalue l'argument
     children[1]->accept(this);
     IROperand val = lastResult_;
-    IRType    type = inferType(children[1]);
+
+    // Cherche d'abord dans typeTable_ (couvre variables, paramètres patchés)
+    IRType type = IRType::UNKNOWN;
+    if (auto* id = dynamic_cast<Identifier*>(children[1])) {
+        auto it = typeTable_.find(id->getName());
+        if (it != typeTable_.end()) type = it->second;
+    }
+    // Si toujours inconnu, infère depuis le nœud AST
+    if (type == IRType::UNKNOWN) type = inferType(children[1]);
+
     emit(IR_Print{ type, val });
-    return ""; // void
+    return "";
 }
 
 // -----------------------------------------------------------------------------
@@ -615,7 +624,6 @@ IROperand IRGenerator::handleCall(SExpr* node) {
     std::string funcName = children[0]->getName();
     std::replace(funcName.begin(), funcName.end(), '-', '_');
 
-    // Évalue les arguments et collecte leurs types
     std::vector<IROperand> args;
     std::vector<IRType>    argTypes;
     for (size_t i = 1; i < children.size(); ++i) {
@@ -624,17 +632,31 @@ IROperand IRGenerator::handleCall(SExpr* node) {
         argTypes.push_back(inferType(children[i]));
     }
 
-    IRType retType = IRType::UNKNOWN;  // ← déclaré EN PREMIER
+    IRType retType = IRType::UNKNOWN;
 
-    // Patche les types des params et re-propage le type de retour
     for (auto& [decl, body] : program_.functions) {
         if (decl.name != funcName) continue;
 
-        // Patch des paramètres
+        // Patch des types des paramètres
         for (size_t j = 0; j < decl.params.size() && j < argTypes.size(); ++j) {
-            if (decl.params[j].first == IRType::UNKNOWN && argTypes[j] != IRType::UNKNOWN) {
+            if (argTypes[j] != IRType::UNKNOWN) {
                 decl.params[j].first = argTypes[j];
                 typeTable_[decl.params[j].second] = argTypes[j];
+            }
+        }
+
+        // Patch des IR_Print dans le corps qui ont un type UNKNOWN
+        for (auto& instr : body.instructions) {
+            if (std::holds_alternative<IR_Print>(instr)) {
+                auto& p = std::get<IR_Print>(instr);
+                if (p.type == IRType::UNKNOWN) {
+                    for (const auto& [ptype, pname] : decl.params) {
+                        if (pname == p.value && ptype != IRType::UNKNOWN) {
+                            p.type = ptype;
+                            break;
+                        }
+                    }
+                }
             }
         }
 
@@ -651,14 +673,31 @@ IROperand IRGenerator::handleCall(SExpr* node) {
             }
         }
 
-        retType = decl.returnType;  // récupère le type final (patché ou non)
+        retType = decl.returnType;
+    }
+
+    // Détermine si la fonction est void (pas de IR_Return dans le corps)
+    bool isVoid = true;
+    for (const auto& [decl, body] : program_.functions) {
+        if (decl.name == funcName) {
+            for (const auto& instr : body.instructions) {
+                if (std::holds_alternative<IR_Return>(instr)) {
+                    isVoid = false; break;
+                }
+            }
+            break;
+        }
+    }
+
+    if (isVoid) {
+        emit(IR_Call{ IRType::VOID, "", funcName, args });
+        return "";
     }
 
     IROperand dest = newTemp(retType);
     emit(IR_Call{ retType, dest, funcName, args });
     return dest;
 }
-
 // =============================================================================
 // Dump de l'IR (pour le debug)
 // =============================================================================

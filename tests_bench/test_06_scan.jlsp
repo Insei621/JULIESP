@@ -13,9 +13,9 @@
 (: val 0)
 (€ "Entrez une valeur :")
 (ç val)
-(: double (* val 2))
+(: double_i (* val 2))
 (€ "Le double est :")
-(€ double)
+(€ double_i )
 
 §§ Saisie et condition
 (: age 0)

@@ -99,6 +99,10 @@ const std::vector<Lexer::Rule> Lexer::rules = {
     { std::regex(R"(^\xC2\xA4)"),             TokenType::CALC_ADREQ, false },
     { std::regex(R"(^\xC2\xB0)"),             TokenType::CALC_NUMBERQ, false },
 
+    // Nombres
+    { std::regex(R"(^-?[0-9]+\.[0-9]+)"), TokenType::LIT_FLOAT, false },
+    { std::regex(R"(^-?[0-9]+)"),         TokenType::LIT_INT, false },
+
     // Symboles simples ASCII
     { std::regex(R"(^\?)"), TokenType::CORE_IF, false },
     { std::regex(R"(^:)"),  TokenType::CORE_SETQ, false },
@@ -115,9 +119,6 @@ const std::vector<Lexer::Rule> Lexer::rules = {
     { std::regex(R"(^>)"),  TokenType::CALC_SUP, false },
     { std::regex(R"(^=)"),  TokenType::CALC_EQ, false },
 
-    // Nombres
-    { std::regex(R"(^[0-9]+\.[0-9]+)"), TokenType::LIT_FLOAT, false },
-    { std::regex(R"(^[0-9]+)"),         TokenType::LIT_INT, false },
 
     // Identificateurs
     { std::regex(R"(^[A-Za-z_][A-Za-z0-9_]*)"), TokenType::IDENT, false },

@@ -89,8 +89,11 @@ void CGenerator::emitFunctions(const IRProgram& program, std::ostream& out) {
     for (const auto& [decl, body] : program.functions) {
         if (!used.count(decl.name)) continue;
 
-        out << "int";
-        out << " " << decl.name << "(";
+        bool hasReturn = false;
+        for (const auto& instr : body.instructions) {
+            if (std::holds_alternative<IR_Return>(instr)) { hasReturn = true; break; }
+        }
+        out << (hasReturn ? "int" : "void");        out << " " << decl.name << "(";
 
         if (decl.params.empty()) {
             out << "void";
