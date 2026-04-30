@@ -28,6 +28,7 @@ enum class IRType {
     CHAR,
     STRING,
     BOOL,
+    LIST,
     VOID,       // Pour les instructions sans valeur de retour (print, etc.)
     UNKNOWN     // Avant résolution de type (on peut l'étendre plus tard)
 };
@@ -40,6 +41,7 @@ inline std::string irTypeToC(IRType t) {
         case IRType::CHAR:   return "char";
         case IRType::STRING: return "char*";
         case IRType::BOOL:   return "int"; // En C, les booléens sont des ints
+        case IRType::LIST: return "Node*";
         case IRType::VOID:   return "void";
         default:             return "/*unknown*/";
     }

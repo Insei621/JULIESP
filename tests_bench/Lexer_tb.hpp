@@ -48,6 +48,8 @@ std::string testCode = R"(
 §§ --- Programme principal ---
 (: nums (& 10 (& 20 (& 30 ²()))))
 
+
+§!
 (€ "=== Accès par position ===")
 (€ "Element 1 :")
 (€ (premier nums))
@@ -79,7 +81,7 @@ std::string testCode = R"(
 (€ (<< liste3))
 (€ "Queue de la liste, tete :")
 (€ (<< (>> liste3)))
-
+!§
 )";
 
 

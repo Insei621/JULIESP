@@ -37,33 +37,56 @@ void CGenerator::generateToFile(const IRProgram& program, const std::string& fil
 void CGenerator::emitPrologue(const IRProgram& program, std::ostream& out) {
     out << "/* Code généré automatiquement — ne pas éditer */\n\n";
 
-    // Includes standard
     out << "#include <stdio.h>\n";
     out << "#include <stdlib.h>\n";
     out << "#include <string.h>\n";
-    out << "#include \"lisp_runtime.h\"\n";  // Notre runtime Lisp
+    out << "#include \"./juliesp_runtime.h\"\n";
     out << "\n";
-    // Génération de prototypes fais par claude mais ça me parait pas utile
+
+
 /*
-    // Forward declarations de toutes les fonctions générées.
-    // Sans ça, si __fn1 appelle __fn0 défini après lui, le compilateur C
-    // se plaindrait d'un appel à une fonction inconnue.
-    if (!program.functions.empty()) {
-        out << "// --- Prototypes --- \n";
-        for (const auto& [decl, body] : program.functions) {
-            out << irTypeToC(decl.returnType) << " " << decl.name << "(";
-            for (size_t i = 0; i < decl.params.size(); ++i) {
-                // Si le type est UNKNOWN, on met "int" par défaut
-                IRType t = decl.params[i].first;
-                out << (t == IRType::UNKNOWN ? "int" : irTypeToC(t));
-                out << " " << decl.params[i].second;
-                if (i + 1 < decl.params.size()) out << ", ";
-            }
-            out << ");\n";
-        }
-        out << "\n";
-    }*/
+    // Définition du type Node (liste chaînée Lisp)
+    out << "/* --- Runtime Lisp intégré --- \n";
+    out << "typedef struct Node {\n";
+    out << "    int value;\n";
+    out << "    struct Node* next;\n";
+    out << "} Node;\n\n";
+
+    // cons : crée un nouveau nœud
+    out << "static Node* lisp_cons(int val, Node* next) {\n";
+    out << "    Node* n = (Node*)malloc(sizeof(Node));\n";
+    out << "    n->value = val;\n";
+    out << "    n->next  = next;\n";
+    out << "    return n;\n";
+    out << "}\n\n";
+
+    // car : retourne la valeur de tête
+    out << "static int lisp_car(Node* lst) {\n";
+    out << "    if (!lst) { fprintf(stderr, \"car: liste vide\\n\"); exit(1); }\n";
+    out << "    return lst->value;\n";
+    out << "}\n\n";
+
+    // cdr : retourne la queue
+    out << "static Node* lisp_cdr(Node* lst) {\n";
+    out << "    if (!lst) { fprintf(stderr, \"cdr: liste vide\\n\"); exit(1); }\n";
+    out << "    return lst->next;\n";
+    out << "}\n\n";
+
+    // null : vrai si la liste est vide
+    out << "static int lisp_null(Node* lst) {\n";
+    out << "    return lst == NULL;\n";
+    out << "}\n\n";
+
+    // atom : vrai pour un entier (toujours vrai ici car on n'a que des int)
+    out << "static int lisp_atom(int x) {\n";
+    out << "    (void)x;\n";
+    out << "    return 1;\n";
+    out << "}\n\n";
+
+    out << "/* --- Fin du runtime --- \n\n";
+    */
 }
+
 
 // =============================================================================
 // SECTION 2 : Fonctions (lambdas)

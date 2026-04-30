@@ -198,16 +198,15 @@ void IRGenerator::visit(Primitive* node) {
 
 void IRGenerator::visit(SExpr* node) {
 
-    // --- Cas 1 : SExpr vide ---
+    // --- Cas 1 : SExpr vide (²() → NULL en C) ---
     if (node->getChildren().empty()) {
-        lastResult_ = ""; // NIL
+        lastResult_ = "NULL";  // ← était ""
         return;
     }
 
-    // --- Cas 2 : SExpr quotée → donnée, pas du code ---
+    // --- Cas 2 : SExpr quotée non vide → liste littérale (non supporté pour l'instant) ---
     if (node->isQuotedNode()) {
-        // On génère juste un commentaire/placeholder pour l'instant
-        lastResult_ = "/*quoted-list*/";
+        lastResult_ = "NULL";  // ← était "/*quoted-list*/"
         return;
     }
 
@@ -354,21 +353,21 @@ IROperand IRGenerator::handleSetq(SExpr* node) {
     }
 
     // 4. Cas normal : Calcul de la valeur
-    valueNode->accept(this); // Génère les instructions pour calculer la valeur
+    // Cas normal
+    valueNode->accept(this);
     IROperand valueResult = lastResult_;
 
-    // 5. Détermination du type
-    IRType type;
-    if (valueNode->isQuotedNode()) { // Utilise bien la méthode publique !
-        type = IRType::STRING;
+    // Cherche le type dans typeTable_ en priorité (couvre LIST, etc.)
+    IRType type = IRType::UNKNOWN;
+    auto it = typeTable_.find(valueResult);
+    if (it != typeTable_.end() && it->second != IRType::UNKNOWN) {
+        type = it->second;
     } else {
         type = inferType(valueNode);
     }
 
-    // 6. Mise à jour et émission
     typeTable_[varName] = type;
     emit(IR_Assign{ type, varName, valueResult });
-
     return varName;
 }
 
@@ -576,37 +575,43 @@ IROperand IRGenerator::handleArithmetic(SExpr* node, const std::string& op) {
 
 IROperand IRGenerator::handlePrimitive(SExpr* node) {
     const auto& children = node->getChildren();
-    std::string primName = children[0]->getName(); // C'est primName qu'il faut utiliser !
+    std::string primName = children[0]->getName();
 
+    if (primName == "¤") return handleArithmetic(node, "==");
+
+    // Collecte les arguments
     std::vector<IROperand> args;
     for (size_t i = 1; i < children.size(); ++i) {
         children[i]->accept(this);
         args.push_back(lastResult_);
     }
 
-    // Traduction du nom pour le C
     std::string cName;
     IRType retType = IRType::UNKNOWN;
 
-    if (primName == "¤") {
-        retType = IRType::BOOL;
-        return handleArithmetic(node, "¤");
-    }
-    else if (primName == "null?") {
-        cName = "lisp_null_";
-        retType = IRType::BOOL;
-    }
+    if      (primName == "<<") { cName = "lisp_car";  retType = IRType::INT;  }
+    else if (primName == ">>") { cName = "lisp_cdr";  retType = IRType::LIST; }
+    else if (primName == "&")  { cName = "lisp_cons"; retType = IRType::LIST; }
+    else if (primName == "|")  { cName = "lisp_null"; retType = IRType::BOOL; }
+    else if (primName == "@")  { cName = "lisp_atom"; retType = IRType::BOOL; }
+    else if (primName == "°")  { cName = "lisp_numberp"; retType = IRType::BOOL; }
     else {
         cName = "lisp_" + primName;
-        // Nettoyage des caractères interdits en C
-        std::replace(cName.begin(), cName.end(), '?', '_');
-        std::replace(cName.begin(), cName.end(), '-', '_');
+        for (char& ch : cName) {
+            if (ch == '?' || ch == '-' || ch == '<' ||
+                ch == '>' || ch == '&' || ch == '|' || ch == '@')
+                ch = '_';
+        }
     }
 
     IROperand dest = newTemp(retType);
+    // Enregistre le type dans typeTable_ pour propagation
+    typeTable_[dest] = retType;
     emit(IR_Call{ retType, dest, cName, args });
     return dest;
 }
+
+
 // -----------------------------------------------------------------------------
 // handleCall : appel de fonction utilisateur (funcName arg1 arg2 ...)
 // -----------------------------------------------------------------------------
@@ -616,12 +621,25 @@ IROperand IRGenerator::handleCall(SExpr* node) {
     std::string funcName = children[0]->getName();
     std::replace(funcName.begin(), funcName.end(), '-', '_');
 
+    // --- Évalue les arguments et collecte leurs types ---
     std::vector<IROperand> args;
     std::vector<IRType>    argTypes;
     for (size_t i = 1; i < children.size(); ++i) {
         children[i]->accept(this);
         args.push_back(lastResult_);
-        argTypes.push_back(inferType(children[i]));
+
+        // Cherche le type de l'argument : typeTable_ en priorité, sinon inferType
+        IRType t = IRType::UNKNOWN;
+        if (auto* id = dynamic_cast<Identifier*>(children[i])) {
+            auto it = typeTable_.find(id->getName());
+            if (it != typeTable_.end()) t = it->second;
+        }
+        if (t == IRType::UNKNOWN) {
+            auto it = typeTable_.find(lastResult_);
+            if (it != typeTable_.end()) t = it->second;
+        }
+        if (t == IRType::UNKNOWN) t = inferType(children[i]);
+        argTypes.push_back(t);
     }
 
     IRType retType = IRType::UNKNOWN;
@@ -629,15 +647,23 @@ IROperand IRGenerator::handleCall(SExpr* node) {
     for (auto& [decl, body] : program_.functions) {
         if (decl.name != funcName) continue;
 
-        // Patch des types des paramètres
+        // --- Patch des types des paramètres ---
         for (size_t j = 0; j < decl.params.size() && j < argTypes.size(); ++j) {
-            if (argTypes[j] != IRType::UNKNOWN) {
-                decl.params[j].first = argTypes[j];
-                typeTable_[decl.params[j].second] = argTypes[j];
+            IRType t = argTypes[j];
+
+            // Si toujours inconnu, cherche dans typeTable_ avec la valeur de l'arg
+            if (t == IRType::UNKNOWN) {
+                auto it = typeTable_.find(args[j]);
+                if (it != typeTable_.end()) t = it->second;
+            }
+
+            if (t != IRType::UNKNOWN) {
+                decl.params[j].first = t;
+                typeTable_[decl.params[j].second] = t;
             }
         }
 
-        // Patch des IR_Print dans le corps qui ont un type UNKNOWN
+        // --- Patch des IR_Print dans le corps ---
         for (auto& instr : body.instructions) {
             if (std::holds_alternative<IR_Print>(instr)) {
                 auto& p = std::get<IR_Print>(instr);
@@ -652,29 +678,51 @@ IROperand IRGenerator::handleCall(SExpr* node) {
             }
         }
 
-        // Re-propage le type de retour depuis le corps si encore UNKNOWN
+        // --- Propage le type de retour si encore UNKNOWN ---
         if (decl.returnType == IRType::UNKNOWN) {
             for (const auto& instr : body.instructions) {
-                if (std::holds_alternative<IR_BinOp>(instr)) {
-                    const auto& b = std::get<IR_BinOp>(instr);
-                    if (b.type != IRType::UNKNOWN) {
-                        decl.returnType = b.type;
-                        break;
+                if (std::holds_alternative<IR_Return>(instr)) {
+                    const std::string& retVal = std::get<IR_Return>(instr).value;
+                    // Cherche dans les instructions du corps
+                    for (const auto& i2 : body.instructions) {
+                        if (std::holds_alternative<IR_BinOp>(i2)) {
+                            const auto& b = std::get<IR_BinOp>(i2);
+                            if (b.dest == retVal && b.type != IRType::UNKNOWN) {
+                                decl.returnType = b.type; break;
+                            }
+                        }
+                        if (std::holds_alternative<IR_Call>(i2)) {
+                            const auto& c = std::get<IR_Call>(i2);
+                            if (c.dest == retVal && c.type != IRType::UNKNOWN) {
+                                decl.returnType = c.type; break;
+                            }
+                        }
+                        if (std::holds_alternative<IR_Assign>(i2)) {
+                            const auto& a = std::get<IR_Assign>(i2);
+                            if (a.dest == retVal) {
+                                auto it = typeTable_.find(a.src);
+                                if (it != typeTable_.end() && it->second != IRType::UNKNOWN) {
+                                    decl.returnType = it->second; break;
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
 
         retType = decl.returnType;
+        break; // trouvé, inutile de continuer
     }
 
-    // Détermine si la fonction est void (pas de IR_Return dans le corps)
+    // --- Détermine si la fonction est void ---
     bool isVoid = true;
     for (const auto& [decl, body] : program_.functions) {
         if (decl.name == funcName) {
             for (const auto& instr : body.instructions) {
                 if (std::holds_alternative<IR_Return>(instr)) {
-                    isVoid = false; break;
+                    const auto& r = std::get<IR_Return>(instr);
+                    if (!r.value.empty()) { isVoid = false; break; }
                 }
             }
             break;
@@ -687,9 +735,11 @@ IROperand IRGenerator::handleCall(SExpr* node) {
     }
 
     IROperand dest = newTemp(retType);
+    typeTable_[dest] = retType;
     emit(IR_Call{ retType, dest, funcName, args });
     return dest;
 }
+
 // =============================================================================
 // Dump de l'IR (pour le debug)
 // =============================================================================
