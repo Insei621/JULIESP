@@ -49,20 +49,15 @@ void CGenerator::emitPrologue(const IRProgram& program, std::ostream& out) {
         out << "/* --- Prototypes --- */\n";
         for (const auto& [decl, body] : program.functions) {
             if (!used.count(decl.name)) continue;
-            bool hasReturn = false;
-            for (const auto& instr : body.instructions)
-                if (std::holds_alternative<IR_Return>(instr)) {
-                    const auto& r = std::get<IR_Return>(instr);
-                    if (!r.value.empty()) { hasReturn = true; break; }
-                }
-            out << (hasReturn ? "int" : "void");
-            out << " " << decl.name << "(";
+
+            // On utilise systématiquement irTypeToC pour le retour et les paramètres
+            out << irTypeToC(decl.returnType) << " " << decl.name << "(";
+
             if (decl.params.empty()) {
                 out << "void";
             } else {
                 for (size_t i = 0; i < decl.params.size(); ++i) {
-                    IRType t = decl.params[i].first;
-                    out << irTypeToC(t) << " " << decl.params[i].second;
+                    out << irTypeToC(decl.params[i].first) << " " << decl.params[i].second;
                     if (i + 1 < decl.params.size()) out << ", ";
                 }
             }
@@ -135,39 +130,46 @@ void CGenerator::emitPrologue(const IRProgram& program, std::ostream& out) {
 //
 
 void CGenerator::emitFunctions(const IRProgram& program, std::ostream& out) {
-    auto used = collectUsedFunctions(program);  // ← doit être LA PREMIÈRE ligne
+    auto used = collectUsedFunctions(program);
 
     for (const auto& [decl, body] : program.functions) {
         if (!used.count(decl.name)) continue;
 
-        bool hasReturn = false;
-        for (const auto& instr : body.instructions) {
-            if (std::holds_alternative<IR_Return>(instr)) { hasReturn = true; break; }
-        }
-        // Après
-        if (!hasReturn) {
-            out << "void";
-        } else {
-            // On utilise le type de retour spécifié dans la déclaration de la fonction
-            out << irTypeToC(decl.returnType);
-        }        out << " " << decl.name << "(";
+        // Signature de la fonction
+        out << irTypeToC(decl.returnType) << " " << decl.name << "(";
 
         if (decl.params.empty()) {
             out << "void";
         } else {
             for (size_t i = 0; i < decl.params.size(); ++i) {
-                IRType t = decl.params[i].first;
-                out << (t == IRType::UNKNOWN ? "int" : irTypeToC(t));
-                out << " " << decl.params[i].second;
+                // On écrit : type nom_parametre
+                out << irTypeToC(decl.params[i].first) << " " << decl.params[i].second;
                 if (i + 1 < decl.params.size()) out << ", ";
             }
         }
-
         out << ") {\n";
+
+        // 1. On émet le corps de la fonction
         emitBlock(body, out, 1);
+
+        // 2. On vérifie si la dernière instruction était déjà un retour
+        bool dejaUnReturn = false;
+        if (!body.instructions.empty()) {
+            // On regarde si la variante active de la dernière instruction est IR_Return
+            if (std::holds_alternative<IR_Return>(body.instructions.back())) {
+                dejaUnReturn = true;
+            }
+        }
+
+        // 3. On ne rajoute le return de sécurité QUE si nécessaire
+        if (!dejaUnReturn && decl.returnType != IRType::VOID) {
+            out << indent(1) << "return 0; // NIL par défaut\n";
+        }
+
         out << "}\n\n";
     }
 }
+
 // =============================================================================
 // SECTION 3 : Main
 // =============================================================================
@@ -380,13 +382,23 @@ std::vector<std::pair<IRType, std::string>> CGenerator::collectDecls(
 //   bloc, on ajoute un ";" vide : "L_end_0: ;"
 //
 
+//ostream operator<<(int _cpp_par_, int _cpp_par_);
+
 void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, int indentLevel) {
 
     // --- IR_Assign : dest = src; ---
     if (std::holds_alternative<IR_Assign>(instr)) {
         const auto& a = std::get<IR_Assign>(instr);
-        out << indent(indentLevel) << a.dest << " = " << a.src << ";\n";
-        return;
+        out << indent(indentLevel) << a.dest << " = ";
+
+        if (a.src == "NULL") {
+            out << "0";
+        } else if (a.type == IRType::INT && isLiteral(a.src)) {
+            out << "ENCODE_INT(" << a.src << ")";
+        } else {
+            out << a.src;
+        }
+        out << ";\n";
     }
 
     // --- IR_BinOp : dest = left op right; ---
@@ -402,10 +414,26 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
     if (std::holds_alternative<IR_Call>(instr)) {
         const auto& c = std::get<IR_Call>(instr);
         out << indent(indentLevel);
-        if (!c.dest.empty()) out << c.dest << " = ";
+
+        // Si la fonction retourne quelque chose, on l'assigne à dest
+        if (!c.dest.empty()) {
+            out << c.dest << " = ";
+        }
+
+        // On écrit le nom de la fonction (ex: lisp_cons, lisp_car, ou une fonction utilisateur)
         out << c.funcName << "(";
+
         for (size_t i = 0; i < c.args.size(); ++i) {
-            out << c.args[i];
+            std::string arg = c.args[i];
+
+            if (arg == "NULL") {
+                out << "0"; // NIL est 0 dans notre système lisp_obj
+            } else if (isLiteral(arg) && arg[0] != '"') {
+                out << "ENCODE_INT(" << arg << ")";
+            } else {
+                out << arg;
+            }
+
             if (i + 1 < c.args.size()) out << ", ";
         }
         out << ");\n";
@@ -443,11 +471,18 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
         return;
     }
 
-    // --- IR_Print : printf(format, value); ---
-    if (std::holds_alternative<IR_Print>(instr)) {
-        const auto& p = std::get<IR_Print>(instr);
-        out << indent(indentLevel)
-            << "printf(\"" << printfFormat(p.type) << "\\n\", " << p.value << ");\n";
+    // --- IR_Print ---
+    if (auto* p = std::get_if<IR_Print>(&instr)) {
+        out << indent(indentLevel);
+
+        // Si la valeur commence par une guillemet, c'est du texte brut
+        if (!p->value.empty() && p->value[0] == '"') {
+            out << "printf(\"%s\\n\", " << p->value << ");\n";
+        }
+        // Sinon, c'est un lisp_obj (t0, t1, nums...), on doit DECODER et afficher un nombre
+        else {
+            out << "printf(\"%ld\\n\", (long)DECODE_INT(" << p->value << "));\n";
+        }
         return;
     }
 
@@ -470,9 +505,23 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
         return;
     }
 
-    out << indent(indentLevel) << "/* [instruction inconnue] */\n";
+    out << indent(indentLevel) << "/* [instruction non gérée explicitement] : ";
+    std::visit([&out](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, IR_Assign>) out << "IR_Assign";
+        else if constexpr (std::is_same_v<T, IR_BinOp>) out << "IR_BinOp";
+        else if constexpr (std::is_same_v<T, IR_Call>) out << "IR_Call";
+        else if constexpr (std::is_same_v<T, IR_FuncDecl>) out << "IR_FuncDecl";
+        else if constexpr (std::is_same_v<T, IR_CondJump>) out << "IR_CondJump";
+        else if constexpr (std::is_same_v<T, IR_Label>) out << "IR_Label";
+        else if constexpr (std::is_same_v<T, IR_Jump>) out << "IR_Jump";
+        else if constexpr (std::is_same_v<T, IR_Return>) out << "IR_Return";
+        else if constexpr (std::is_same_v<T, IR_Print>) out << "IR_Print";
+        else if constexpr (std::is_same_v<T, IR_Scan>) out << "IR_Scan";
+        else out << "Unknown Type";
+    }, instr);
+    out << " */\n";
 }
-
 
 // =============================================================================
 // Utilitaires
@@ -484,12 +533,12 @@ std::string CGenerator::indent(int level) {
 
 std::string CGenerator::printfFormat(IRType type) {
     switch (type) {
-        case IRType::INT:    return "%d";
-        case IRType::FLOAT:  return "%f";
-        case IRType::CHAR:   return "%c";
+        case IRType::INT:    return "%ld"; // lisp_obj est souvent un long
+        case IRType::BOOL:   return "%ld";
+        case IRType::LIST:   return "%ld";
         case IRType::STRING: return "%s";
-        case IRType::BOOL:   return "%d";
-        default:             return "%d"; // UNKNOWN → on tente int
+        case IRType::FLOAT:  return "%f";
+        default:             return "%ld";
     }
 }
 
@@ -517,13 +566,25 @@ bool CGenerator::isLiteral(const std::string& name) {
 
 std::string CGenerator::irTypeToC(IRType type) {
     switch (type) {
-        case IRType::INT:    return "int";
-        case IRType::BOOL:   return "int";
-        case IRType::FLOAT:  return "float";
-        case IRType::STRING: return "char*";
-        case IRType::VOID:   return "void";
-        case IRType::LIST:   return "Node*";
-        default:             return "int";
+        case IRType::INT:
+        case IRType::LIST:
+        case IRType::BOOL:
+            // L'entier, la liste et le booléen Lisp partagent le même conteneur.
+            // Le type 'lisp_obj' est défini dans ton runtime comme un intptr_t.
+            return "lisp_obj";
+
+        case IRType::FLOAT:
+            return "float";
+
+        case IRType::STRING:
+            return "char*";
+
+        case IRType::VOID:
+            return "void";
+
+        default:
+            // Par sécurité, on traite tout ce qui est inconnu comme un objet Lisp.
+            return "lisp_obj";
     }
 }
 
