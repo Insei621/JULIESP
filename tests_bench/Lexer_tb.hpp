@@ -48,8 +48,6 @@ std::string testCode = R"(
 §§ --- Programme principal ---
 (: nums (& 10 (& 20 (& 30 ²()))))
 
-
-§!
 (€ "=== Accès par position ===")
 (€ "Element 1 :")
 (€ (premier nums))
@@ -59,14 +57,14 @@ std::string testCode = R"(
 (€ (troisieme nums))
 
 (€ "=== Test paires ===")
-(: p (& 100 200))
+(: p (& 100 (& 200 ²())))
 (€ "fst(p) =")
 (€ (fst p))
 (€ "snd(p) =")
 (€ (snd p))
 
 (€ "=== Atom? et null? dans fonctions ===")
-(describe 42)
+(describe ²())
 (describe nums)
 (est_vide ²())
 (est_vide nums)
@@ -81,7 +79,6 @@ std::string testCode = R"(
 (€ (<< liste3))
 (€ "Queue de la liste, tete :")
 (€ (<< (>> liste3)))
-!§
 )";
 
 

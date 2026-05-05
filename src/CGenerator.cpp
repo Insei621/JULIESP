@@ -43,6 +43,34 @@ void CGenerator::emitPrologue(const IRProgram& program, std::ostream& out) {
     out << "#include \"./juliesp_runtime.h\"\n";
     out << "\n";
 
+    // Dans emitPrologue, après le runtime :
+    if (!program.functions.empty()) {
+        auto used = collectUsedFunctions(program);
+        out << "/* --- Prototypes --- */\n";
+        for (const auto& [decl, body] : program.functions) {
+            if (!used.count(decl.name)) continue;
+            bool hasReturn = false;
+            for (const auto& instr : body.instructions)
+                if (std::holds_alternative<IR_Return>(instr)) {
+                    const auto& r = std::get<IR_Return>(instr);
+                    if (!r.value.empty()) { hasReturn = true; break; }
+                }
+            out << (hasReturn ? "int" : "void");
+            out << " " << decl.name << "(";
+            if (decl.params.empty()) {
+                out << "void";
+            } else {
+                for (size_t i = 0; i < decl.params.size(); ++i) {
+                    IRType t = decl.params[i].first;
+                    out << irTypeToC(t) << " " << decl.params[i].second;
+                    if (i + 1 < decl.params.size()) out << ", ";
+                }
+            }
+            out << ");\n";
+        }
+        out << "\n";
+    }
+
 
 /*
     // Définition du type Node (liste chaînée Lisp)
@@ -116,7 +144,13 @@ void CGenerator::emitFunctions(const IRProgram& program, std::ostream& out) {
         for (const auto& instr : body.instructions) {
             if (std::holds_alternative<IR_Return>(instr)) { hasReturn = true; break; }
         }
-        out << (hasReturn ? "int" : "void");        out << " " << decl.name << "(";
+        // Après
+        if (!hasReturn) {
+            out << "void";
+        } else {
+            // On utilise le type de retour spécifié dans la déclaration de la fonction
+            out << irTypeToC(decl.returnType);
+        }        out << " " << decl.name << "(";
 
         if (decl.params.empty()) {
             out << "void";
@@ -351,7 +385,6 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
     // --- IR_Assign : dest = src; ---
     if (std::holds_alternative<IR_Assign>(instr)) {
         const auto& a = std::get<IR_Assign>(instr);
-        // On n'émet PAS le type ici — les déclarations sont déjà en tête de bloc
         out << indent(indentLevel) << a.dest << " = " << a.src << ";\n";
         return;
     }
@@ -369,9 +402,7 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
     if (std::holds_alternative<IR_Call>(instr)) {
         const auto& c = std::get<IR_Call>(instr);
         out << indent(indentLevel);
-        if (!c.dest.empty()) {
-            out << c.dest << " = ";
-        }
+        if (!c.dest.empty()) out << c.dest << " = ";
         out << c.funcName << "(";
         for (size_t i = 0; i < c.args.size(); ++i) {
             out << c.args[i];
@@ -391,11 +422,8 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
     }
 
     // --- IR_Label : L_name: ; ---
-    // Le "; " vide est obligatoire en C99/C11 : un label ne peut pas être
-    // la dernière instruction d'un bloc (undefined behavior sinon).
     if (std::holds_alternative<IR_Label>(instr)) {
         const auto& l = std::get<IR_Label>(instr);
-        // Les labels ne sont pas indentés (convention de lisibilité)
         out << l.name << ": ;\n";
         return;
     }
@@ -416,14 +444,6 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
     }
 
     // --- IR_Print : printf(format, value); ---
-    //
-    // On choisit le format selon le type :
-    //   INT/BOOL → %d
-    //   FLOAT    → %f
-    //   CHAR     → %c
-    //   STRING   → %s
-    //   UNKNOWN  → %d  (défaut)
-    //
     if (std::holds_alternative<IR_Print>(instr)) {
         const auto& p = std::get<IR_Print>(instr);
         out << indent(indentLevel)
@@ -432,25 +452,19 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
     }
 
     // --- IR_Scan : scanf(format, &dest); ---
-    //
-    // ATTENTION : pour les strings, scanf lit dans un buffer existant.
-    // On ne peut pas faire scanf("%s", &str) — on passe str directement
-    // (char* est déjà une adresse).
-    //
     if (std::holds_alternative<IR_Scan>(instr)) {
         const auto& s = std::get<IR_Scan>(instr);
         out << indent(indentLevel) << "scanf(\"" << printfFormat(s.type) << "\", ";
         if (s.type == IRType::STRING) {
-            out << s.dest;  // char* est déjà un pointeur
+            out << s.dest;
         } else {
-            out << "&" << s.dest;  // Adresse pour les scalaires
+            out << "&" << s.dest;
         }
         out << ");\n";
         return;
     }
 
     // --- IR_FuncDecl inline : ne devrait pas apparaître dans un bloc ---
-    // (Les fonctions sont stockées dans program_.functions, pas dans un bloc)
     if (std::holds_alternative<IR_FuncDecl>(instr)) {
         out << indent(indentLevel) << "/* [IR_FuncDecl inline — ignoré] */\n";
         return;
@@ -458,6 +472,7 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
 
     out << indent(indentLevel) << "/* [instruction inconnue] */\n";
 }
+
 
 // =============================================================================
 // Utilitaires
@@ -485,8 +500,7 @@ bool CGenerator::isTemp(const std::string& name) {
 }
 
 bool CGenerator::isLiteral(const std::string& name) {
-    if (name.empty()) return true;
-    // Commence par un chiffre → constante numérique : 42, 3.14f
+    if (name.empty() || name == "NULL") return true; // Commence par un chiffre → constante numérique : 42, 3.14f
     if (std::isdigit(name[0])) return true;
     // Commence par '-' suivi d'un chiffre → nombre négatif
     if (name[0] == '-' && name.size() > 1 && std::isdigit(name[1])) return true;
@@ -508,7 +522,8 @@ std::string CGenerator::irTypeToC(IRType type) {
         case IRType::FLOAT:  return "float";
         case IRType::STRING: return "char*";
         case IRType::VOID:   return "void";
-        default:             return "int"; // Sécurité : au pire, on met int
+        case IRType::LIST:   return "Node*";
+        default:             return "int";
     }
 }
 

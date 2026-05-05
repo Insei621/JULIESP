@@ -593,7 +593,16 @@ IROperand IRGenerator::handlePrimitive(SExpr* node) {
     else if (primName == ">>") { cName = "lisp_cdr";  retType = IRType::LIST; }
     else if (primName == "&")  { cName = "lisp_cons"; retType = IRType::LIST; }
     else if (primName == "|")  { cName = "lisp_null"; retType = IRType::BOOL; }
-    else if (primName == "@")  { cName = "lisp_atom"; retType = IRType::BOOL; }
+    else if (primName == "@") {
+        // Choisit la bonne fonction selon le type de l'argument
+        IRType argType = IRType::UNKNOWN;
+        if (!args.empty()) {
+            auto it = typeTable_.find(args[0]);
+            if (it != typeTable_.end()) argType = it->second;
+        }
+        cName   = (argType == IRType::LIST) ? "lisp_atom_list" : "lisp_atom_int";
+        retType = IRType::BOOL;
+    }
     else if (primName == "°")  { cName = "lisp_numberp"; retType = IRType::BOOL; }
     else {
         cName = "lisp_" + primName;

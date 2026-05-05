@@ -78,6 +78,32 @@ void SemanticAnalyzer::visit(SExpr* node) {
             symtable.closeScope(); // On détruit le scope local en sortant
             return;
         }
+        // << >> | : attendent une liste — PAS @
+        if (op == "cdr" || op == "car" || op == "null") {
+            if (children.size() >= 2) {
+                if (dynamic_cast<IntegerLit*>(children[1]) ||
+                    dynamic_cast<FloatLit*>(children[1])) {
+                    throw std::runtime_error(
+                        "'" + op + "' attend une liste mais reçoit un littéral numérique. "
+                        "[Ligne " + std::to_string(children[1]->getLine()) + "]"
+                    );
+                    }
+            }
+        }
+
+        // & : le 2ème arg doit être une liste ou ²()
+        if (op == "cons") {
+            if (children.size() >= 3) {
+                if (dynamic_cast<IntegerLit*>(children[2]) ||
+                    dynamic_cast<FloatLit*>(children[2])) {
+                    throw std::runtime_error(
+                        "'&' attend une liste comme 2ème argument. "
+                        "Utilise ²() pour la liste vide. "
+                        "[Ligne " + std::to_string(children[2]->getLine()) + "]"
+                    );
+                    }
+            }
+        }
 
         // --- CAS : BLOC DE CODE ( ; expr1 expr2 ... ) ---
         if (op == "progn") {
@@ -103,71 +129,7 @@ void SemanticAnalyzer::visit(SExpr* node) {
         child->accept(this);
     }
 }
-/*
-void SemanticAnalyzer::visit(SExpr* node) {
-    // --- LE BOUCLIER QUOTE ---
-    if (node->isQuotedNode()) {
-        return; // On stoppe l'analyse ici pour ce nœud et ses enfants
-    }
 
-    count_sexpr++;
-    auto children = node->getChildren();
-    if (children.empty()) return;
-
-    // Analyse normale (non-quoted)
-    Primitive* prim = dynamic_cast<Primitive*>(children[0]);
-    if (prim) {
-        std::string op = prim->getName();
-
-        // --- CAS : AFFECTATION ( : nom valeur ) ---
-        if (op == ":") {
-            if (children.size() < 3) throw std::runtime_error("':' attend un nom et une valeur.");
-
-            // 1. On récupère le nom SANS le visiter (pour éviter le lookup prématuré)
-            Identifier* id = dynamic_cast<Identifier*>(children[1]);
-            if (!id) throw std::runtime_error("Le premier argument de ':' doit être un identifiant.");
-
-            // 2. On analyse la valeur (le 3ème enfant)
-            children[2]->accept(this);
-
-            // 3. On enregistre le symbole dans le scope actuel
-            symtable.enter(id->getName(), children[2]);
-            return;
-        }
-
-        // --- CAS : FONCTION ANONYME ( £ (params) corps ) ---
-        if (op == "£") {
-            symtable.openScope(); // On entre dans le monde de la fonction
-
-            // On enregistre les paramètres (le 2ème enfant)
-            if (children.size() > 1) {
-                // Logique pour extraire les noms des paramètres et les "enter" dans le scope
-            }
-
-            // On visite le corps (le 3ème enfant)
-            if (children.size() > 2) children[2]->accept(this);
-
-            symtable.closeScope(); // On ressort
-            return;
-        }
-
-        // --- CAS : BLOC DE CODE ( ; expr1 expr2 ... ) ---
-        if (op == ";") {
-            for (size_t i = 1; i < children.size(); ++i) {
-                children[i]->accept(this);
-            }
-            return;
-        }
-
-        // Si c'est une primitive normale ( + , - , etc.), on laisse filer vers la visite standard
-    }
-
-    // Visite standard pour les appels de fonctions
-    for (auto child : children) {
-        child->accept(this);
-    }
-}
-*/
 // --- VISITE DES IDENTIFIANTS (Vérification des variables) ---
 void SemanticAnalyzer::visit(Identifier* node) {
 

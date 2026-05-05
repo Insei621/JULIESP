@@ -38,14 +38,14 @@
 (€ (troisieme nums))
 
 (€ "=== Test paires ===")
-(: p (& 100 200))
+(: p (& 100 (& 200 ²())))
 (€ "fst(p) =")
 (€ (fst p))
 (€ "snd(p) =")
 (€ (snd p))
 
 (€ "=== Atom? et null? dans fonctions ===")
-(describe 42)
+(describe ²())
 (describe nums)
 (est_vide ²())
 (est_vide nums)
