@@ -1,8 +1,8 @@
 §§ Test 1
-(setq x 42)
-    (if (< x 50)
-        (print "Petit")
-        (print "Grand")
+(: x 42)
+    (? (< x 50)
+        (€ "Petit")
+        (€ "Grand")
     )
     (+ 1 2 (* 3 4))
 
@@ -11,7 +11,7 @@
 §§ Déclaration simple et calcul imbriqué
 ( : a 10 )
 ( : b ( + a ( * 5 2.5 ) ) )
-( € c )
+( € b )
 
 §§ Utilisation de littéraux différents
 ( : message "Resultat:" )
@@ -53,13 +53,12 @@
     ( € "Le carre de 8 est :" resultat )
 )
 
-( € "Veuillez entrer votre nom :" )
-( : nom ( ç "Utilisateur" ) )
+(: nom "Bob")   §§ Le scanf ne prends que des ints, on ne peux pas lui demander de nom
 
 ( € "Bonjour " nom )
 
 §§ Chargement d'un module externe
-( $ "math_library.jlsp" )
+( $ "math_lib.jlsp" )
 
 §!
    Ce bloc test les commentaires multi-lignes
@@ -107,9 +106,11 @@
 
 §§ Symboles qui ressemblent à des opérateurs mais sont des identifiants
 §§ Choix technique pour ce test: en lisp c'est possible mais dans juliesp on dira que non
+§!
 ( : +++ 10 )
 ( : -_- "Humeur" )
 ( + +++ 5 )
+!§
 
 ( ;
     ( ? µ ( € "Vrai" ) )  §§ IF sans ELSE

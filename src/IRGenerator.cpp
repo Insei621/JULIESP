@@ -285,6 +285,7 @@ void IRGenerator::visit(SExpr* node) {
 IROperand IRGenerator::handleIf(SExpr* node) {
     const auto& children = node->getChildren();
 
+    // Évalue la condition
     children[1]->accept(this);
     IROperand condResult = lastResult_;
 
@@ -292,15 +293,22 @@ IROperand IRGenerator::handleIf(SExpr* node) {
     std::string labelElse = newLabel("L_else");
     std::string labelEnd  = newLabel("L_end");
 
+    // Crée un temporaire pour le résultat du if (si les branches retournent une valeur)
+    IROperand result = newTemp(IRType::UNKNOWN);
+
     emit(IR_CondJump{ condResult, labelThen, labelElse });
 
-    // Branche THEN
+    // --- Branche THEN ---
     emit(IR_Label{ labelThen });
     children[2]->accept(this);
     IROperand thenResult = lastResult_;
+    // Stocke le résultat DANS la branche, avant le saut
+    if (!thenResult.empty()) {
+        emit(IR_Assign{ IRType::UNKNOWN, result, thenResult });
+    }
     emit(IR_Jump{ labelEnd });
 
-    // Branche ELSE
+    // --- Branche ELSE ---
     emit(IR_Label{ labelElse });
     IROperand elseResult = "";
     if (children.size() >= 4) {
@@ -310,23 +318,22 @@ IROperand IRGenerator::handleIf(SExpr* node) {
         if (!isNil) {
             children[3]->accept(this);
             elseResult = lastResult_;
+            // Stocke le résultat DANS la branche, avant le label de fin
+            if (!elseResult.empty()) {
+                emit(IR_Assign{ IRType::UNKNOWN, result, elseResult });
+            }
         }
     }
 
     emit(IR_Label{ labelEnd });
 
-    // Ne crée un temporaire que si les branches retournent une vraie valeur
-    if (!thenResult.empty() && !elseResult.empty()) {
-        IROperand result = newTemp(IRType::UNKNOWN);
-        // Insère les assignations AVANT les labels (dans le bon ordre)
-        // On les émet juste avant le jump et avant le label de fin
-        // → En pratique : retourne thenResult (le CGenerator choisira)
-        return thenResult; // la valeur du then (utilisée si le if est une expr)
+    // Si les deux branches sont void → retourne ""
+    // Sinon retourne le temporaire commun
+    if (thenResult.empty() && elseResult.empty()) {
+        return "";
     }
-
-    return ""; // void si les branches ne retournent rien
+    return result;
 }
-
 
 IROperand IRGenerator::handleSetq(SExpr* node) {
     const auto& children = node->getChildren();
@@ -499,19 +506,26 @@ IROperand IRGenerator::handlePrint(SExpr* node) {
     children[1]->accept(this);
     IROperand val = lastResult_;
 
-    // Cherche d'abord dans typeTable_ (couvre variables, paramètres patchés)
     IRType type = IRType::UNKNOWN;
+
+    // Priorité 1 : cherche via l'identifiant dans typeTable_
     if (auto* id = dynamic_cast<Identifier*>(children[1])) {
         auto it = typeTable_.find(id->getName());
         if (it != typeTable_.end()) type = it->second;
     }
-    // Si toujours inconnu, infère depuis le nœud AST
+
+    // Priorité 2 : cherche via la valeur lastResult_ dans typeTable_
+    if (type == IRType::UNKNOWN) {
+        auto it = typeTable_.find(val);
+        if (it != typeTable_.end()) type = it->second;
+    }
+
+    // Priorité 3 : infère depuis le nœud AST
     if (type == IRType::UNKNOWN) type = inferType(children[1]);
 
     emit(IR_Print{ type, val });
     return "";
 }
-
 // -----------------------------------------------------------------------------
 // handleScan : (scan var)
 // -----------------------------------------------------------------------------
@@ -719,10 +733,14 @@ IROperand IRGenerator::handleCall(SExpr* node) {
         break; // trouvé, inutile de continuer
     }
 
-    // --- Détermine si la fonction est void ---
-    bool isVoid = true;
+    // Détermine si la fonction est void
+    bool isVoid = false;        // ← par défaut : non void
+    bool funcFound = false;
+
     for (const auto& [decl, body] : program_.functions) {
         if (decl.name == funcName) {
+            funcFound = true;
+            isVoid = true;      // on suppose void, on cherche un return
             for (const auto& instr : body.instructions) {
                 if (std::holds_alternative<IR_Return>(instr)) {
                     const auto& r = std::get<IR_Return>(instr);
@@ -731,6 +749,12 @@ IROperand IRGenerator::handleCall(SExpr* node) {
             }
             break;
         }
+    }
+
+    // Si la fonction n'est pas encore dans program_.functions
+    // (cas de la récursion), on suppose qu'elle retourne une valeur
+    if (!funcFound) {
+        isVoid = false;
     }
 
     if (isVoid) {
@@ -786,7 +810,11 @@ std::string IRGenerator::instrToString(const IRInstruction& instr) const {
     }
     if (std::holds_alternative<IR_Call>(instr)) {
         const auto& c = std::get<IR_Call>(instr);
-        std::string s = irTypeToC(c.type) + " " + c.dest + " = " + c.funcName + "(";
+        std::string s;
+        if (!c.dest.empty()) {
+            s = irTypeToC(c.type) + " " + c.dest + " = ";
+        }
+        s += c.funcName + "(";
         for (size_t i = 0; i < c.args.size(); ++i) {
             s += c.args[i];
             if (i + 1 < c.args.size()) s += ", ";

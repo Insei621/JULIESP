@@ -38,20 +38,17 @@ void SemanticAnalyzer::visit(SExpr* node) {
 
         // --- CAS : AFFECTATION ( : nom valeur ) ---
         if (op == "setq") {
-            if (children.size() < 3)
-                throw std::runtime_error("L'opérateur ':' attend un nom et une valeur.");
-
             Identifier* id = dynamic_cast<Identifier*>(children[1]);
             if (!id) throw std::runtime_error("Le premier argument de ':' doit être un identifiant.");
-
-            // ✅ Ne pas visiter le nom ici !
-
-            // On analyse la valeur uniquement
-            children[2]->accept(this);
 
             // Puis on enregistre le symbole
             symtable.enter(id->getName(), children[2]);
 
+            if (children.size() < 3)
+                throw std::runtime_error("L'opérateur ':' attend un nom et une valeur.");
+
+            // On analyse la valeur uniquement
+            children[2]->accept(this);
             return;
         }
 
@@ -141,7 +138,7 @@ void SemanticAnalyzer::visit(Identifier* node) {
     std::string name = node->getName();
 
     // Exclusion des constantes littérales
-    if (name == "ù" || name == "µ") return;
+    if (name == "ù" || name == "µ" || name == "nil") return;
 
     if (symtable.lookup(name) == nullptr) {
         // On récupère la ligne et la colonne depuis le nœud

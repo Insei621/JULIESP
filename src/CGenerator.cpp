@@ -4,6 +4,8 @@
 
 #include "../include/CGenerator.h"
 
+#include <complex>
+
 // =============================================================================
 // Point d'entrée principal
 // =============================================================================
@@ -209,12 +211,15 @@ void CGenerator::emitBlock(const IR_Block& block, std::ostream& out, int indentL
         }
         else if (std::holds_alternative<IR_BinOp>(instr)) {
             const auto& b = std::get<IR_BinOp>(instr);
+            if (!used.count(b.dest)) { continue; }
             if (!isLiteral(b.left))  used.insert(b.left);
             if (!isLiteral(b.right)) used.insert(b.right);
         }
         else if (std::holds_alternative<IR_Call>(instr)) {
             for (const auto& arg : std::get<IR_Call>(instr).args)
                 if (!isLiteral(arg)) used.insert(arg);
+                if (!arg.dest.empty() && !used.count(arg.dest)) { continue; }
+
         }
         else if (std::holds_alternative<IR_Print>(instr)) {
             const auto& p = std::get<IR_Print>(instr);
@@ -399,6 +404,7 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
             out << a.src;
         }
         out << ";\n";
+        return;
     }
 
     // --- IR_BinOp : dest = left op right; ---
