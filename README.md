@@ -74,7 +74,7 @@ juliesp <fichier.jlsp> [options]
 ### Exemples
 
 ```bash
-# Compiler un programme JulieSP vers C
+# Compiler un programme JULIESP vers C
 juliesp programme.jlsp
 
 # Compiler vers un fichier C spécifique
@@ -124,11 +124,11 @@ Elle contient la liste complète des options, la syntaxe du langage, les primiti
  
 ---
 
-## Syntaxe JulieSP
+## Syntaxe JULIESP
 
 ### Formes spéciales
 
-| JulieSP | Lisp standard | Description |
+| JULIESP | Lisp standard | Description |
 |---------|---------------|-------------|
 | `: x 42` | `setq x 42` | Assignation de variable |
 | `? cond then else` | `if cond then else` | Condition |
@@ -141,7 +141,7 @@ Elle contient la liste complète des options, la syntaxe du langage, les primiti
 
 ### Primitives de listes
 
-| JulieSP | Lisp standard | Description |
+| JULIESP | Lisp standard | Description |
 |---------|---------------|-------------|
 | `<< lst` | `car lst` | Premier élément |
 | `>> lst` | `cdr lst` | Reste de la liste |
@@ -160,7 +160,7 @@ Elle contient la liste complète des options, la syntaxe du langage, les primiti
 
 ### Littéraux
 
-| JulieSP | Description |
+| JULIESP | Description |
 |---------|-------------|
 | `42` | Entier |
 | `3.14` | Flottant |
@@ -265,7 +265,7 @@ Si `juliesp` n'est pas encore installé globalement :
 
 ## Bibliothèque standard — julib
 
-JulieSP inclut une bibliothèque standard `julib.jlsp` dans le dossier `lib/`.
+JULIESP inclut une bibliothèque standard `julib.jlsp` dans le dossier `lib/`.
 
 ### Utilisation
 
@@ -323,7 +323,7 @@ JulieSP inclut une bibliothèque standard `julib.jlsp` dans le dossier `lib/`.
 
 ## Runtime
 
-Le fichier `juliesp_runtime.h` est installé dans `/usr/local/include`. Il est automatiquement inclus dans tout fichier C généré et fournit le support pour les listes JulieSP via un système de valeurs taguées (`lisp_obj`).
+Le fichier `juliesp_runtime.h` est installé dans `/usr/local/include`. Il est automatiquement inclus dans tout fichier C généré et fournit le support pour les listes JULIESP via un système de valeurs taguées (`lisp_obj`).
 
 Les listes peuvent contenir des **entiers** et des **chaînes de caractères**.
 

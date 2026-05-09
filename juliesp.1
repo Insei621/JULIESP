@@ -1,7 +1,7 @@
-.TH JULIESP 1 "2025" "JulieSP 1.0.0" "Manuel de l'utilisateur"
+.TH JULIESP 1 "2026" "JULIESP 1.0.0" "Manuel de l'utilisateur"
 
 .SH NOM
-juliesp \- Compilateur du langage JulieSP
+juliesp \- Compilateur du langage JULIESP
 
 .SH SYNOPSIS
 .B juliesp
@@ -11,7 +11,7 @@ juliesp \- Compilateur du langage JulieSP
 .SH DESCRIPTION
 .B juliesp
 est un compilateur pour le langage
-.BR JulieSP ,
+.BR JULIESP ,
 un dialecte Lisp à syntaxe AZERTY qui compile vers du code C.
 Le compilateur prend en entrée un fichier source
 .I .jlsp
@@ -46,7 +46,7 @@ via le PrettyPrinter.
 .TP
 .BR \-di ", " \-\-dump\-imgast
 Génère une image de l'AST au format PNG dans
-.IR AST_Graphe/ast.png .
+.IR ast.png dans le dossier de sortie .
 Nécessite
 .BR graphviz (1).
 
@@ -79,7 +79,7 @@ Affiche un résumé des options disponibles.
 
 .SH EXEMPLES
 
-Compiler un programme JulieSP vers C :
+Compiler un programme JULIESP vers C :
 .PP
 .RS
 .B juliesp programme.jlsp
@@ -159,7 +159,7 @@ Saisie utilisateur d'un entier (équivalent à
 
 .TP
 .B ($ "fichier")
-Chargement d'un fichier JulieSP (équivalent à
+Chargement d'un fichier JULIESP (équivalent à
 .I load
 ).
 
@@ -231,7 +231,7 @@ Commentaire multi-lignes.
 
 .SH BIBLIOTHÈQUE STANDARD
 
-JulieSP inclut une bibliothèque standard
+JULIESP inclut une bibliothèque standard
 .B julib.jlsp
 dans le dossier
 .IR lib/ .
@@ -256,11 +256,11 @@ Exécutable du compilateur.
 
 .TP
 .I /usr/local/include/juliesp_runtime.h
-En-tête C du runtime JulieSP (listes, encodage des valeurs).
+En-tête C du runtime JULIESP (listes, encodage des valeurs).
 
 .TP
 .I lib/julib.jlsp
-Bibliothèque standard JulieSP.
+Bibliothèque standard JULIESP.
 
 .SH VOIR AUSSI
 .BR gcc (1),
@@ -268,7 +268,7 @@ Bibliothèque standard JulieSP.
 .BR dot (1)
 
 .SH AUTEUR
-Keryan — Projet JulieSP
+Keryan — Projet JULIESP
 
 .SH BOGUES
 Signaler les bogues sur la page GitHub du projet.
