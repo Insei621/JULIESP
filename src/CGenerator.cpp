@@ -300,7 +300,8 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
             out << "0";
         } else if (a.type == IRType::STRING && isLiteral(a.src)) {
             out << "ENCODE_STR(" << a.src << ")";  // ← string dans lisp_obj
-        } else if (a.type == IRType::INT && isLiteral(a.src)) {
+        } else if ((a.type == IRType::INT || a.type == IRType::UNKNOWN)
+                   && isLiteral(a.src) && a.src != "0") {
             out << "ENCODE_INT(" << a.src << ")";
         } else {
             out << a.src;
@@ -309,14 +310,26 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
         return;
     }
 
-    // --- IR_BinOp : dest = left op right; ---
+
     if (std::holds_alternative<IR_BinOp>(instr)) {
         const auto& b = std::get<IR_BinOp>(instr);
-        out << indent(indentLevel)
-            << b.dest << " = " << b.left << " " << b.op << " " << b.right << ";\n";
+
+        bool isComparison = (b.op == "==" || b.op == "<" || b.op == ">" ||
+                             b.op == "<=" || b.op == ">=");
+
+        std::string left  = isLiteral(b.left)  ? "ENCODE_INT(" + b.left + ")"  : b.left;
+        std::string right = isLiteral(b.right) ? "ENCODE_INT(" + b.right + ")" : b.right;
+
+        out << indent(indentLevel);
+        if (isComparison) {
+            out << b.dest << " = DECODE_INT(" << left << ") "
+                << b.op << " DECODE_INT(" << right << ");\n";
+        } else {
+            out << b.dest << " = ENCODE_INT(DECODE_INT(" << left << ") "
+                << b.op << " DECODE_INT(" << right << "));\n";
+        }
         return;
     }
-
     // --- IR_Call : dest = funcName(arg1, arg2, ...); ---
     //              ou funcName(arg1, arg2, ...);  si dest est vide (void)
     if (std::holds_alternative<IR_Call>(instr)) {
