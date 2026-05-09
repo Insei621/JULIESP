@@ -38,3 +38,4 @@ target_include_directories(juliesp PRIVATE include)
 
 install(TARGETS juliesp DESTINATION /usr/local/bin)
 install(FILES juliesp_runtime.h DESTINATION /usr/local/include)
+install(FILES juliesp.1 DESTINATION /usr/share/man/man1)

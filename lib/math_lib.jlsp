@@ -1,9 +1,0 @@
-§§ lib/math_lib.jlsp
-§§ Bibliothèque mathématique pour le test_07_load
-
-(: carre (£ (n) (* n n)))
-(: cube  (£ (n) (* n (* n n))))
-(: abs_val (£ (n)
-    (? (> n 0) n (- 0 n))))
-(: est_positif (£ (n)
-    (> n 0)))

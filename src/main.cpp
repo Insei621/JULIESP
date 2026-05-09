@@ -79,11 +79,14 @@ std::string readSourceFile(const std::string& path) {
 int main(int argc, char** argv) {
 
     // --- Aide ---
-    if (argc < 2
-        || std::strcmp(argv[1], "--help") == 0
-        || std::strcmp(argv[1], "-h") == 0) {
+    if (argc < 2) {
+        std::cerr << "Usage: juliesp <fichier.jlsp> [options]\n";
+        std::cerr << "Utilisez -h pour l'aide.\n";
+        return 2;
+    }
+    if (std::strcmp(argv[1], "--help") == 0 || std::strcmp(argv[1], "-h") == 0) {
         printHelp(argv[0]);
-        return (argc < 2) ? 2 : 0;
+        return 0;
     }
 
     // --- Parsing des arguments ---

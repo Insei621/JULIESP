@@ -1,0 +1,143 @@
+§§ =============================================================
+§§ julib.jlsp — Bibliothèque standard du langage JulieSP
+§§ Utilisation : ($ "lib/julib.jlsp")
+§§ =============================================================
+
+
+§§ =============================================================
+§§ SECTION 1 — Arithmétique
+§§ =============================================================
+
+§§ Valeur absolue
+(: abs (£ (n)
+    (? (< n 0)
+        (- 0 n)
+        n)))
+
+§§ Maximum de deux valeurs
+(: max2 (£ (a b)
+    (? (> a b) a b)))
+
+§§ Minimum de deux valeurs
+(: min2 (£ (a b)
+    (? (< a b) a b)))
+
+§§ Carré d'un nombre
+(: carre (£ (n) (* n n)))
+
+§§ Cube d'un nombre
+(: cube (£ (n) (* n (* n n))))
+
+§§ Vrai si n est pair
+(: pair (£ (n)
+    (= (- n (* (/ n 2) 2)) 0)))
+
+§§ Vrai si n est impair
+(: impair (£ (n)
+    (? (pair n) ù µ)))
+
+§§ Clamp : limite val entre lo et hi
+(: clamp (£ (val lo hi)
+    (max2 lo (min2 val hi))))
+
+§§ Puissance entière : base^exp
+(: puissance (£ (base exp)
+    (? (= exp 0)
+        1
+        (* base (puissance base (- exp 1))))))
+
+§§ Factorielle
+(: factorielle (£ (n)
+    (? (= n 0)
+        1
+        (* n (factorielle (- n 1))))))
+
+§§ Fibonacci
+(: fib (£ (n)
+    (? (< n 2)
+        n
+        (+ (fib (- n 1)) (fib (- n 2))))))
+
+§§ Somme de 1 à n
+(: somme_n (£ (n)
+    (? (= n 0)
+        0
+        (+ n (somme_n (- n 1))))))
+
+
+§§ =============================================================
+§§ SECTION 2 — Logique
+§§ =============================================================
+
+§§ Négation booléenne
+(: non (£ (b)
+    (? b ù µ)))
+
+§§ ET logique
+(: et (£ (a b)
+    (? a b ù)))
+
+§§ OU logique
+(: ou (£ (a b)
+    (? a µ b)))
+
+§§ OU exclusif
+(: xou (£ (a b)
+    (? a (non b) b)))
+
+
+§§ =============================================================
+§§ SECTION 3 — Listes
+§§ =============================================================
+
+§§ Longueur d'une liste
+(: longueur (£ (l)
+    (? (| l)
+        0
+        (+ 1 (longueur (>> l))))))
+
+§§ Deuxième élément
+(: deuxieme (£ (l)
+    (<< (>> l))))
+
+§§ Troisième élément
+(: troisieme (£ (l)
+    (<< (>> (>> l)))))
+
+§§ Dernier élément d'une liste
+(: dernier (£ (l)
+    (? (| (>> l))
+        (<< l)
+        (dernier (>> l)))))
+
+§§ Vrai si l'élément x est dans la liste l
+(: contient (£ (l x)
+    (? (| l)
+        ù
+        (? (= (<< l) x)
+            µ
+            (contient (>> l) x)))))
+
+§§ Somme de tous les éléments d'une liste
+(: somme_liste (£ (l)
+    (? (| l)
+        0
+        (+ (<< l) (somme_liste (>> l))))))
+
+§§ Maximum d'une liste (liste non vide)
+(: max_liste (£ (l)
+    (? (| (>> l))
+        (<< l)
+        (max2 (<< l) (max_liste (>> l))))))
+
+§§ Minimum d'une liste (liste non vide)
+(: min_liste (£ (l)
+    (? (| (>> l))
+        (<< l)
+        (min2 (<< l) (min_liste (>> l))))))
+
+§§ Nième élément d'une liste (base 0)
+(: nth (£ (l n)
+    (? (= n 0)
+        (<< l)
+        (nth (>> l) (- n 1)))))

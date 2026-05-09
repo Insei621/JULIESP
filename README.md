@@ -1,6 +1,6 @@
-# JuliesSP
+# JulieSP
 
-Compilateur pour le langage **JuliesSP**, un dialecte Lisp qui compile vers C.
+Compilateur pour le langage **JulieSP**, un dialecte Lisp qui compile vers C.
 
 ---
 
@@ -21,8 +21,8 @@ sudo apt install cmake g++ gcc graphviz
 ### Installer JuliesSP
 
 ```bash
-git clone https://github.com/Insei621/JULIESP
-cd JULIESP
+git clone https://github.com/<ton-compte>/juliesp
+cd juliesp
 chmod +x install.sh
 ./install.sh
 ```
@@ -98,7 +98,7 @@ juliesp programme.jlsp --sem-only
 ### Formes spéciales
 
 | JuliesSP | Lisp standard | Description |
-|----------|----------|-------------|
+|----------|---------------|-------------|
 | `: x 42` | `setq x 42` | Assignation de variable |
 | `? cond then else` | `if cond then else` | Condition |
 | `£ (params) corps` | `lambda (params) corps` | Fonction anonyme |
@@ -106,7 +106,7 @@ juliesp programme.jlsp --sem-only
 | `€ expr` | `print expr` | Affichage |
 | `ç var` | `scanf var` | Saisie utilisateur (entiers) |
 | `$ "fichier"` | `load "fichier"` | Chargement de fichier |
-| `² expr` | `' expr` | Citation (ne pas évaluer) |
+| `² expr` | `quote expr` | Citation (ne pas évaluer) |
 
 ### Primitives de listes
 
@@ -241,3 +241,69 @@ Les listes peuvent contenir des **entiers** et des **chaînes de caractères**.
 
 ---
 
+## Bibliothèque standard — julib
+
+JulieSP inclut une bibliothèque standard `julib.jlsp` située dans le dossier `lib/`. Elle fournit des fonctions utilitaires prêtes à l'emploi.
+
+### Utilisation
+
+```lisp
+($ "lib/julib.jlsp")
+
+§§ Utilise ensuite les fonctions directement
+(€ (factorielle 5))
+(€ (longueur (& 1 (& 2 (& 3 ²())))))
+(€ (max2 10 42))
+```
+
+### Fonctions disponibles
+
+#### Arithmétique
+
+| Fonction | Description | Exemple |
+|----------|-------------|---------|
+| `(abs n)` | Valeur absolue | `(abs -5)` → `5` |
+| `(max2 a b)` | Maximum de deux valeurs | `(max2 3 7)` → `7` |
+| `(min2 a b)` | Minimum de deux valeurs | `(min2 3 7)` → `3` |
+| `(carre n)` | Carré | `(carre 4)` → `16` |
+| `(cube n)` | Cube | `(cube 3)` → `27` |
+| `(pair n)` | Vrai si n est pair | `(pair 4)` → `1` |
+| `(impair n)` | Vrai si n est impair | `(impair 3)` → `1` |
+| `(clamp val lo hi)` | Limite val entre lo et hi | `(clamp 15 0 10)` → `10` |
+| `(puissance base exp)` | Puissance entière | `(puissance 2 8)` → `256` |
+| `(factorielle n)` | Factorielle | `(factorielle 5)` → `120` |
+| `(fib n)` | Fibonacci | `(fib 7)` → `13` |
+| `(somme_n n)` | Somme de 1 à n | `(somme_n 10)` → `55` |
+
+#### Logique
+
+| Fonction | Description | Exemple |
+|----------|-------------|---------|
+| `(non b)` | Négation booléenne | `(non µ)` → `0` |
+| `(et a b)` | ET logique | `(et µ ù)` → `0` |
+| `(ou a b)` | OU logique | `(ou µ ù)` → `1` |
+| `(xou a b)` | OU exclusif | `(xou µ µ)` → `0` |
+
+#### Listes
+
+| Fonction | Description | Exemple |
+|----------|-------------|---------|
+| `(longueur l)` | Longueur d'une liste | `(longueur lst)` → `3` |
+| `(deuxieme l)` | Deuxième élément | `(deuxieme lst)` → `2` |
+| `(troisieme l)` | Troisième élément | `(troisieme lst)` → `3` |
+| `(dernier l)` | Dernier élément | `(dernier lst)` → `30` |
+| `(contient l x)` | Vrai si x est dans l | `(contient lst 2)` → `1` |
+| `(somme_liste l)` | Somme des éléments | `(somme_liste lst)` → `60` |
+| `(max_liste l)` | Maximum de la liste | `(max_liste lst)` → `30` |
+| `(min_liste l)` | Minimum de la liste | `(min_liste lst)` → `10` |
+| `(nth l n)` | Nième élément (base 0) | `(nth lst 1)` → `20` |
+
+---
+
+## Runtime
+
+Le fichier `juliesp_runtime.h` est installé dans `/usr/local/include`. Il est automatiquement inclus dans tout fichier C généré et fournit le support pour les listes JulieSP via un système de valeurs taguées (`lisp_obj`).
+
+Les listes peuvent contenir des **entiers** et des **chaînes de caractères**.
+
+---

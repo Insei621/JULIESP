@@ -1,0 +1,274 @@
+.TH JULIESP 1 "2025" "JulieSP 1.0.0" "Manuel de l'utilisateur"
+
+.SH NOM
+juliesp \- Compilateur du langage JulieSP
+
+.SH SYNOPSIS
+.B juliesp
+.I fichier.jlsp
+.RI [ options ]
+
+.SH DESCRIPTION
+.B juliesp
+est un compilateur pour le langage
+.BR JulieSP ,
+un dialecte Lisp à syntaxe AZERTY qui compile vers du code C.
+Le compilateur prend en entrée un fichier source
+.I .jlsp
+et produit un fichier C compilable avec gcc.
+
+.SH OPTIONS
+
+.SS Options de sortie
+
+.TP
+.BR \-o " " \fIfichier.c\fR ", " \-\-output " " \fIfichier.c\fR
+Spécifie le fichier de sortie C. Par défaut :
+.IR output/output.c .
+
+.TP
+.BR \-c ", " \-\-compile
+Compile automatiquement le fichier C généré avec gcc pour produire
+un binaire exécutable. Le binaire prend le même nom que le fichier C
+sans l'extension.
+
+.SS Options de debug
+
+.TP
+.BR \-dl ", " \-\-dump\-lex
+Affiche la liste des tokens produits par l'analyse lexicale.
+
+.TP
+.BR \-da ", " \-\-dump\-ast
+Affiche l'arbre syntaxique abstrait (AST) dans le terminal
+via le PrettyPrinter.
+
+.TP
+.BR \-di ", " \-\-dump\-imgast
+Génère une image de l'AST au format PNG dans
+.IR AST_Graphe/ast.png .
+Nécessite
+.BR graphviz (1).
+
+.TP
+.BR \-dr ", " \-\-dump\-ir
+Affiche la représentation intermédiaire (IR) générée avant
+la production du code C.
+
+.SS Options de pipeline
+
+.TP
+.B \-\-lex\-only
+S'arrête après l'analyse lexicale.
+
+.TP
+.B \-\-parse\-only
+S'arrête après l'analyse syntaxique.
+
+.TP
+.B \-\-sem\-only
+S'arrête après l'analyse sémantique.
+
+.TP
+.B \-\-ir\-only
+S'arrête après la génération de l'IR.
+
+.TP
+.BR \-h ", " \-\-help
+Affiche un résumé des options disponibles.
+
+.SH EXEMPLES
+
+Compiler un programme JulieSP vers C :
+.PP
+.RS
+.B juliesp programme.jlsp
+.RE
+
+Compiler vers un fichier C spécifique :
+.PP
+.RS
+.B juliesp programme.jlsp \-o mon_prog.c
+.RE
+
+Compiler vers C puis produire un binaire exécutable :
+.PP
+.RS
+.B juliesp programme.jlsp \-c
+.RE
+
+Afficher les tokens et l'IR :
+.PP
+.RS
+.B juliesp programme.jlsp \-dl \-dr
+.RE
+
+Générer une image de l'AST :
+.PP
+.RS
+.B juliesp programme.jlsp \-di
+.RE
+
+S'arrêter après l'analyse sémantique :
+.PP
+.RS
+.B juliesp programme.jlsp \-\-sem\-only
+.RE
+
+.SH SYNTAXE JULIESP
+
+.SS Formes spéciales
+
+.TP
+.B (: nom valeur)
+Assignation de variable (équivalent à
+.I setq
+).
+
+.TP
+.B (? condition then else)
+Condition (équivalent à
+.I if
+). La branche
+.I else
+est optionnelle.
+
+.TP
+.B (£ (params) corps)
+Fonction anonyme (équivalent à
+.I lambda
+).
+
+.TP
+.B (; expr1 expr2 ...)
+Séquence d'expressions (équivalent à
+.I progn
+).
+
+.TP
+.B (€ expr)
+Affichage (équivalent à
+.I print
+).
+
+.TP
+.B (ç var)
+Saisie utilisateur d'un entier (équivalent à
+.I scanf
+).
+
+.TP
+.B ($ "fichier")
+Chargement d'un fichier JulieSP (équivalent à
+.I load
+).
+
+.TP
+.B (² expr)
+Citation — ne pas évaluer l'expression (équivalent à
+.I quote
+).
+
+.SS Primitives de listes
+
+.TP
+.B (<< liste)
+Premier élément (équivalent à
+.I car
+).
+
+.TP
+.B (>> liste)
+Reste de la liste (équivalent à
+.I cdr
+).
+
+.TP
+.B (& val liste)
+Construire une liste (équivalent à
+.I cons
+).
+
+.TP
+.B (| liste)
+Vrai si la liste est vide (équivalent à
+.I null?
+).
+
+.TP
+.B (@ val)
+Vrai si val est un atome (équivalent à
+.I atom?
+).
+
+.SS Littéraux
+
+.TP
+.B µ
+Vrai (équivalent à
+.I T
+).
+
+.TP
+.B ù
+Faux / liste vide (équivalent à
+.I NIL
+).
+
+.TP
+.B ²()
+Liste vide.
+
+.SS Commentaires
+
+.TP
+.B §§
+Commentaire sur une ligne.
+
+.TP
+.BR §! " ... " !§
+Commentaire multi-lignes.
+
+.SH BIBLIOTHÈQUE STANDARD
+
+JulieSP inclut une bibliothèque standard
+.B julib.jlsp
+dans le dossier
+.IR lib/ .
+Pour l'utiliser :
+
+.PP
+.RS
+.B ($ "lib/julib.jlsp")
+.RE
+
+Elle fournit notamment :
+.BR abs ", " max2 ", " min2 ", " carre ", " cube ", " pair ", "
+.BR impair ", " clamp ", " puissance ", " factorielle ", " fib ", "
+.BR non ", " et ", " ou ", " longueur ", " dernier ", " contient ", "
+.BR somme_liste ", " max_liste ", " min_liste ", " nth .
+
+.SH FICHIERS
+
+.TP
+.I /usr/local/bin/juliesp
+Exécutable du compilateur.
+
+.TP
+.I /usr/local/include/juliesp_runtime.h
+En-tête C du runtime JulieSP (listes, encodage des valeurs).
+
+.TP
+.I lib/julib.jlsp
+Bibliothèque standard JulieSP.
+
+.SH VOIR AUSSI
+.BR gcc (1),
+.BR graphviz (1),
+.BR dot (1)
+
+.SH AUTEUR
+Keryan — Projet JulieSP
+
+.SH BOGUES
+Signaler les bogues sur la page GitHub du projet.
