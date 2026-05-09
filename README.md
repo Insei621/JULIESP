@@ -21,7 +21,7 @@ sudo apt install cmake g++ gcc graphviz
 ### Installer JulieSP
 
 ```bash
-git clone https://github.com/Insei621/juliesp
+git clone https://github.com/<ton-compte>/juliesp
 cd juliesp
 sudo make install
 ```
@@ -197,12 +197,12 @@ Elle contient la liste complète des options, la syntaxe du langage, les primiti
 
 ## Tests
 
-Le dossier `tests/` contient une suite de tests unitaires couvrant toutes les fonctionnalités du langage.
+Le dossier `tests_bench/` contient une suite de tests unitaires couvrant toutes les fonctionnalités du langage.
 
 ### Lancer tous les tests
 
 ```bash
-cd tests
+cd tests_bench
 chmod +x run_tests.sh
 ./run_tests.sh
 ```
@@ -239,17 +239,17 @@ Si `juliesp` n'est pas encore installé globalement :
 
 | Fichier | Ce qu'il teste | Cas |
 |---------|----------------|-----|
-| `unit_01_variables` | Variables, types, réassignation | 7 |
-| `unit_02_arithmetique` | +, -, *, /, comparaisons | 10 |
-| `unit_03_conditions` | if/else, imbrications | 9 |
-| `unit_04_lambda` | Fonctions, appels, composition | 7 |
-| `unit_05_progn` | Séquences d'instructions | 4 |
-| `unit_06_listes` | cons, car, cdr, null?, atom? | 9 |
-| `unit_07_recursion` | Factorielle, Fibonacci, somme | 4 |
-| `unit_08_scopes` | Variables globales, shadowing | 4 |
-| `unit_09_listes_fonctions` | Primitives listes dans fonctions | 7 |
-| `unit_10_strings` | Chaînes de caractères | 5 |
-| `unit_11_primitives` | °, ¤, <, >, = | 7 |
+| `tests_bench/unit_01_variables` | Variables, types, réassignation | 7 |
+| `tests_bench/unit_02_arithmetique` | +, -, *, /, comparaisons | 10 |
+| `tests_bench/unit_03_conditions` | if/else, imbrications | 9 |
+| `tests_bench/unit_04_lambda` | Fonctions, appels, composition | 7 |
+| `tests_bench/unit_05_progn` | Séquences d'instructions | 4 |
+| `tests_bench/unit_06_listes` | cons, car, cdr, null?, atom? | 9 |
+| `tests_bench/unit_07_recursion` | Factorielle, Fibonacci, somme | 4 |
+| `tests_bench/unit_08_scopes` | Variables globales, shadowing | 4 |
+| `tests_bench/unit_09_listes_fonctions` | Primitives listes dans fonctions | 7 |
+| `tests_bench/unit_10_strings` | Chaînes de caractères | 5 |
+| `tests_bench/unit_11_primitives` | °, ¤, <, >, = | 7 |
 
 ---
 
@@ -318,3 +318,7 @@ Le fichier `juliesp_runtime.h` est installé dans `/usr/local/include`. Il est a
 Les listes peuvent contenir des **entiers** et des **chaînes de caractères**.
 
 ---
+
+## Licence
+
+MIT
