@@ -210,7 +210,9 @@ int main(int argc, char** argv) {
         root->accept(&gv);
         dotFile << "}\n";
         dotFile.close();
-        system("dot -Tpng AST_Graphe/ast.dot -o AST_Graphe/ast.png");
+        int dotRet = system("dot -Tpng AST_Graphe/ast.dot -o AST_Graphe/ast.png");
+        if (dotRet != 0)
+            std::cerr << "\033[1;33m[Attention]\033[0m graphviz a échoué — est-il installé ?\n";
         std::cout << "\033[1;32m[juliesp]\033[0m Image AST : AST_Graphe/ast.png\n";
     }
 

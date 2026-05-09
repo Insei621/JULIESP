@@ -32,10 +32,14 @@ add_executable(juliesp
 target_include_directories(juliesp PRIVATE include)
 
 # =============================================================================
-# Installation : `sudo make install` copie juliesp dans /usr/local/bin
-# et juliesp_runtime.h dans /usr/local/include
+# Installation
 # =============================================================================
 
-install(TARGETS juliesp DESTINATION /usr/local/bin)
-install(FILES juliesp_runtime.h DESTINATION /usr/local/include)
-install(FILES juliesp.1 DESTINATION /usr/share/man/man1)
+install(TARGETS juliesp
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+
+install(FILES juliesp_runtime.h
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+
+install(FILES juliesp.1
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man1)

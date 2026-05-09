@@ -21,13 +21,21 @@ sudo apt install cmake g++ gcc graphviz
 ### Installer JulieSP
 
 ```bash
-git clone https://github.com/<ton-compte>/juliesp
+git clone https://github.com/Insei621/juliesp
 cd juliesp
-chmod +x install.sh
-./install.sh
+sudo make install
 ```
 
 Après l'installation, `juliesp` est accessible depuis n'importe où dans le terminal.
+
+### Commandes disponibles
+
+| Commande | Description |
+|----------|-------------|
+| `make` | Compile le projet |
+| `sudo make install` | Compile et installe |
+| `make clean` | Supprime les fichiers de compilation |
+| `sudo make uninstall` | Désinstalle juliesp |
 
 ---
 
@@ -310,7 +318,3 @@ Le fichier `juliesp_runtime.h` est installé dans `/usr/local/include`. Il est a
 Les listes peuvent contenir des **entiers** et des **chaînes de caractères**.
 
 ---
-
-## Licence
-
-MIT
