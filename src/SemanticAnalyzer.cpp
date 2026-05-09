@@ -6,19 +6,11 @@ void SemanticAnalyzer::analyze(ASTNode* root) {
     // Réinitialisation des statistiques
     count_sexpr = count_symbols = count_primitives = count_literals = 0;
 
-    std::cout << "\033[1;34m[Sémantique]\033[0m Lancement de l'analyse...";
-
     try {
         root->accept(this);
-        Scope* global = symtable.getGlobalScope();
-        std::cout << "\n--- RÉSULTAT DES TABLES DES SYMBOLES ---" << std::endl;
-        // On récupère le scope global (la racine de l'arbre) pour tout afficher
-        printAllScopes(symtable.getCurrentScope(), 0);        std::cout << "----------------------------------------" << std::endl;
-        std::cout << "\033[1;32m[Succès]\033[0m Sémantique validée avec succès." << std::endl;
-
+        //std::cout << "\033[1;32m[Succès]\033[0m Sémantique validée avec succès." << std::endl;
     } catch (const std::exception& e) {
-        std::cerr << "\n\033[1;31m[ERREUR SÉMANTIQUE]\033[0m " << e.what() << std::endl;
-        // On ne coupe pas le programme ici pour laisser le main gérer l'exit
+        throw; // Remonte l'exception au main pour qu'il gère l'affichage
     }
 }
 

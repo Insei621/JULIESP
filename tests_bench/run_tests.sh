@@ -17,12 +17,11 @@ for test_file in "$TESTS_DIR"/unit_*.jlsp; do
     name=$(basename "$test_file")
 
     # Compile le test
-    "$JULIESP" "$test_file" -o "/tmp/juliesp_test_out.c" 2>/tmp/juliesp_err.txt
-
+    "$JULIESP" "$test_file" -o "/tmp/juliesp_test_out.c" > /tmp/juliesp_out.txt 2>&1
     if [ $? -ne 0 ]; then
         echo "  [FAIL] $name"
         echo "         Erreur de compilation :"
-        cat /tmp/juliesp_err.txt | sed 's/^/         /'
+        cat /tmp/juliesp_out.txt | sed 's/^/         /'
         FAIL=$((FAIL + 1))
         ERRORS+=("$name")
         continue

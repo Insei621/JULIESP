@@ -12,7 +12,7 @@ Lexer::Lexer(std::string source)
 {}
 
 std::vector<Token> Lexer::tokenize() {
-    std::cout << "\033[1;34m[Lexage]\033[0m Lancement de l'analyse...";
+//std::cout << "\033[1;34m[Lexage]\033[0m Lancement de l'analyse...\n";
     std::vector<Token> tokens;
 
     while (!view.empty()) {
@@ -46,7 +46,7 @@ std::vector<Token> Lexer::tokenize() {
     tokens.push_back({TokenType::END_OF_FILE, "", line, static_cast<int>(cursor)});
     reporting_erreurs(tokens);
 
-    std::cout << "\033[1;32m[Succès]\033[0m Analyse lexicale terminée." << std::endl;
+    //std::cout << "\033[1;32m[Succès]\033[0m Analyse lexicale terminée." << std::endl;
     return tokens;
 }
 

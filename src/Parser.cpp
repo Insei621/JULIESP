@@ -8,7 +8,6 @@
 Parser::Parser(std::vector<Token> t, std::string sourceDir) : tokens(std::move(t)), current(0), sourceDir_(std::move(sourceDir)) {}
 
 ASTNode* Parser::parse() {
-    std::cout << "\033[1;34m[Parsing]\033[0m Lancement de l'analyse..." << std::endl;
     // On capture le premier token pour le nœud racine
     Token first = showNext();
     SExpr* root = new SExpr(first.line, first.cursor, false);
@@ -22,9 +21,6 @@ ASTNode* Parser::parse() {
                 elementCount++;
             }
         }
-
-        // Message de succès final
-        std::cout << "\033[1;32m[Succès]\033[0m Analyse syntaxique terminée (" << elementCount << " expressions)." << std::endl;
         return root;
 
     } catch (const std::exception& e) {
@@ -190,7 +186,7 @@ std::string Parser::readFile(const std::string& path) {
         std::ifstream file(fullPath);
         if (file.is_open()) {
             // Si on trouve le fichier, on l'affiche en debug pour être sûr
-            std::cout << "\033[1;32m[Load]\033[0m Chargement de : " << fullPath << std::endl;
+            //std::cout << "\033[1;32m[Load]\033[0m Chargement de : " << fullPath << std::endl;
             std::stringstream buffer;
             buffer << file.rdbuf();
             return buffer.str();

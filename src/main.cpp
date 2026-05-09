@@ -149,6 +149,7 @@ int main(int argc, char** argv) {
 
     Lexer lexer(source);
     std::vector<Token> tokens = lexer.tokenize();
+    std::cout << "\033[1;32m[Succès]\033[0m Analyse lexicale terminée.\n";
 
     if (dumpLex) {
         lexer.afficherTokens(tokens);
@@ -211,6 +212,7 @@ int main(int argc, char** argv) {
     SemanticAnalyzer semantic;
     try {
         semantic.analyze(root);
+        std::cout << "\033[1;32m[Succès]\033[0m Analyse sémantique terminée.\n";
     } catch (const std::exception& e) {
         std::cerr << "\033[1;31m[Erreur Sémantique]\033[0m " << e.what() << "\n";
         return 1;
