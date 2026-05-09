@@ -96,6 +96,8 @@ private:
 
     std::unordered_set<std::string> computeUsed(const IR_Block& block);
 
+    IRProgram program_;
+
 };
 
 #endif //COMPILATEUR_JULIESP_CGENERATOR_H

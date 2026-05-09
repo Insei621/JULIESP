@@ -7,6 +7,8 @@
 #include <complex>
 
 void CGenerator::generateProgram(const IRProgram& program, std::ostream& out) {
+    // Dans generateProgram :
+    program_ = program;
     emitPrologue(program, out);
     emitGlobals(program, out);
     emitFunctions(program, out);
@@ -584,6 +586,19 @@ std::unordered_set<std::string> CGenerator::computeUsed(const IR_Block& block) {
                             changed = true;
                         }
                     }
+                }
+            }
+        }
+        for (const auto& [decl, body] : program_.functions) {
+            for (const auto& instr : body.instructions) {
+                if (std::holds_alternative<IR_BinOp>(instr)) {
+                    const auto& b = std::get<IR_BinOp>(instr);
+                    if (!isLiteral(b.left) && !isTemp(b.left))   used.insert(b.left);
+                    if (!isLiteral(b.right) && !isTemp(b.right)) used.insert(b.right);
+                }
+                else if (std::holds_alternative<IR_Assign>(instr)) {
+                    const auto& a = std::get<IR_Assign>(instr);
+                    if (!isLiteral(a.src) && !isTemp(a.src)) used.insert(a.src);
                 }
             }
         }

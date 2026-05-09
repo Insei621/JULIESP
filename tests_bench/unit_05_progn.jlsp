@@ -26,8 +26,8 @@
 §§ [U05-04] Progn dans une lambda
 (: traiter (£ (x)
     (;
-        (: double (* x 2))
-        (€ double)
+        (: doubler (* x 2))
+        (€ doubler)
         (€ "done"))))
 
 (traiter 11)
