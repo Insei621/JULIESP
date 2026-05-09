@@ -46,7 +46,6 @@ std::vector<Token> Lexer::tokenize() {
     tokens.push_back({TokenType::END_OF_FILE, "", line, static_cast<int>(cursor)});
     reporting_erreurs(tokens);
 
-    afficherTokens(tokens);
     std::cout << "\033[1;32m[Succès]\033[0m Analyse lexicale terminée." << std::endl;
     return tokens;
 }

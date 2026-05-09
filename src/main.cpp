@@ -151,21 +151,7 @@ int main(int argc, char** argv) {
     std::vector<Token> tokens = lexer.tokenize();
 
     if (dumpLex) {
-        std::cout << "\n=== DUMP LEX ===\n";
-        std::cout << std::left
-                  << std::setw(20) << "TYPE"
-                  << std::setw(25) << "VALUE"
-                  << std::setw(8)  << "LINE"
-                  << std::setw(8)  << "COL"  << "\n";
-        std::cout << std::string(61, '-') << "\n";
-        for (const auto& tok : tokens) {
-            std::cout << std::left
-                      << std::setw(20) << static_cast<int>(tok.type)
-                      << std::setw(25) << tok.value
-                      << std::setw(8)  << tok.line
-                      << std::setw(8)  << tok.cursor << "\n";
-        }
-        std::cout << "\n";
+        lexer.afficherTokens(tokens);
     }
 
     if (lexOnly) return 0;

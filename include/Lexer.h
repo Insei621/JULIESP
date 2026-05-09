@@ -18,6 +18,7 @@ class Lexer {
 public:
     explicit Lexer(std::string source);
     std::vector<Token> tokenize();
+    void afficherTokens(const std::vector<Token>& tokens) const;
 
 private:
     struct Rule {
@@ -34,7 +35,6 @@ private:
 
     void advance(std::string_view matched);
     void reporting_erreurs(const std::vector<Token>& tokens) const;
-    void afficherTokens(const std::vector<Token>& tokens) const;
 };
 
 
