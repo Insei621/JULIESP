@@ -337,21 +337,15 @@ IROperand IRGenerator::handleIf(SExpr* node) {
 
 IROperand IRGenerator::handleSetq(SExpr* node) {
     const auto& children = node->getChildren();
-
-    // 1. On récupère le nom de la variable (Cible)
     std::string varName = children[1]->getName();
     std::replace(varName.begin(), varName.end(), '-', '_');
 
-    // 2. On identifie le nœud de valeur (Source)
-    ASTNode* valueNode = children[2];
-
-    // 3. Gestion spécifique des Lambdas (Fonctions nommées)
-    if (auto* sexpr = dynamic_cast<SExpr*>(valueNode)) {
+    // Si la valeur est un lambda, on lui donne le nom de la variable
+    if (auto* sexpr = dynamic_cast<SExpr*>(children[2])) {
         if (!sexpr->getChildren().empty()) {
             if (auto* prim = dynamic_cast<Primitive*>(sexpr->getChildren()[0])) {
                 if (prim->getName() == "lambda" || prim->getName() == "£") {
-                    handleLambdaWithName(sexpr, varName);
-                    // On part du principe qu'une fonction est un type spécial ou UNKNOWN en C
+                    IROperand funcName = handleLambdaWithName(sexpr, varName);
                     typeTable_[varName] = IRType::UNKNOWN;
                     return varName;
                 }
@@ -359,21 +353,28 @@ IROperand IRGenerator::handleSetq(SExpr* node) {
         }
     }
 
-    // 4. Cas normal : Calcul de la valeur
-    // Cas normal
-    valueNode->accept(this);
+    // Cas normal : évalue la valeur
+    children[2]->accept(this);
     IROperand valueResult = lastResult_;
 
-    // Cherche le type dans typeTable_ en priorité (couvre LIST, etc.)
+    // Détermine le type — priorité à typeTable_ (couvre les résultats
+    // de primitives et d'appels), puis inferType sur le nœud AST
     IRType type = IRType::UNKNOWN;
+
+    // Priorité 1 : le résultat est déjà dans typeTable_ (ex: retour de lisp_car)
     auto it = typeTable_.find(valueResult);
     if (it != typeTable_.end() && it->second != IRType::UNKNOWN) {
         type = it->second;
-    } else {
-        type = inferType(valueNode);
     }
 
+    // Priorité 2 : infère depuis le nœud AST (littéraux, identifiants connus)
+    if (type == IRType::UNKNOWN) {
+        type = inferType(children[2]);
+    }
+
+    // Enregistre le type de la variable pour les utilisations futures
     typeTable_[varName] = type;
+
     emit(IR_Assign{ type, varName, valueResult });
     return varName;
 }
@@ -393,7 +394,9 @@ IROperand IRGenerator::handleSetq(SExpr* node) {
 //
 
 IROperand IRGenerator::handleLambda(SExpr* node) {
-    return handleLambdaWithName(node, "");  // nom générique si pas de setq
+    // Lambda anonyme non assignée à une variable via setq
+    // On ne génère pas de fonction — on retourne NIL
+    return "0";
 }
 
 // Dans IRGenerator.cpp — même logique que handleLambda mais avec nom imposé
@@ -508,24 +511,20 @@ IROperand IRGenerator::handlePrint(SExpr* node) {
 
     IRType type = IRType::UNKNOWN;
 
-    // Priorité 1 : cherche via l'identifiant dans typeTable_
     if (auto* id = dynamic_cast<Identifier*>(children[1])) {
         auto it = typeTable_.find(id->getName());
         if (it != typeTable_.end()) type = it->second;
     }
-
-    // Priorité 2 : cherche via la valeur lastResult_ dans typeTable_
     if (type == IRType::UNKNOWN) {
         auto it = typeTable_.find(val);
         if (it != typeTable_.end()) type = it->second;
     }
-
-    // Priorité 3 : infère depuis le nœud AST
     if (type == IRType::UNKNOWN) type = inferType(children[1]);
 
     emit(IR_Print{ type, val });
     return "";
 }
+
 // -----------------------------------------------------------------------------
 // handleScan : (scan var)
 // -----------------------------------------------------------------------------

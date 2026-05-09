@@ -39,6 +39,9 @@ private:
     // Écrit le prologue : #include, prototypes forward des fonctions
     void emitPrologue(const IRProgram& program, std::ostream& out);
 
+    // Déclare les variables globales
+    void emitGlobals(const IRProgram& program, std::ostream& out);
+
     // Écrit toutes les fonctions (lambdas)
     void emitFunctions(const IRProgram& program, std::ostream& out);
 
@@ -52,7 +55,9 @@ private:
     // Traduit un IR_Block complet (avec la passe de déclaration en tête)
     void emitBlock(const IR_Block& block, std::ostream& out, int indentLevel = 1);
 
-    size_t emitIfElse(const std::vector<IRInstruction>& instrs, size_t i, std::ostream& out, int indentLevel);
+    size_t emitIfElse(const std::vector<IRInstruction>& instrs,
+                      size_t i, std::ostream& out, int indentLevel,
+                      const std::unordered_set<std::string>& used);
 
     // Traduit une seule IRInstruction en C
     void emitInstruction(const IRInstruction& instr, std::ostream& out, int indentLevel);
@@ -88,6 +93,8 @@ private:
 
     std::string irTypeToC(IRType type);
     std::unordered_set<std::string> collectUsedFunctions(const IRProgram& program);
+
+    std::unordered_set<std::string> computeUsed(const IR_Block& block);
 
 };
 

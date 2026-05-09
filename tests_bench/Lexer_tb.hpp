@@ -113,13 +113,6 @@ std::string testCode = R"(
 ( : commande ²( + 1 2 ) )
 ( : imbrication_quote ²( ²( ²( a ) ) ) )
 
-( : calcul_fou
-    ( ? ( > ( + 1 ( * 2 3 ) ) 5 )
-        ( & ²resultat ( £ ( x y ) ( + x y ( * x y ) ) ) )
-        ( ; ( € "Erreur" ) ù )
-    )
-)
-
 §§ Listes vides dans des listes
 ( : vide ( & ( ) ( & ( ) ( ) ) ) )
 

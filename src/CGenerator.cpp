@@ -6,12 +6,9 @@
 
 #include <complex>
 
-// =============================================================================
-// Point d'entrée principal
-// =============================================================================
-
 void CGenerator::generateProgram(const IRProgram& program, std::ostream& out) {
     emitPrologue(program, out);
+    emitGlobals(program, out);
     emitFunctions(program, out);
     emitMain(program, out);
 }
@@ -23,18 +20,6 @@ void CGenerator::generateToFile(const IRProgram& program, const std::string& fil
     }
     generateProgram(program, file);
 }
-
-// =============================================================================
-// SECTION 1 : Prologue
-// =============================================================================
-//
-// Le prologue contient :
-//   1. Les #include standard
-//   2. L'inclusion du runtime Lisp (fonctions car, cdr, cons, etc.)
-//   3. Les prototypes (forward declarations) de toutes les fonctions
-//      générées — obligatoire en C si une fonction appelle une autre
-//      définie plus loin dans le fichier.
-//
 
 void CGenerator::emitPrologue(const IRProgram& program, std::ostream& out) {
     out << "/* Code généré automatiquement — ne pas éditer */\n\n";
@@ -69,67 +54,19 @@ void CGenerator::emitPrologue(const IRProgram& program, std::ostream& out) {
     }
 
 
-/*
-    // Définition du type Node (liste chaînée Lisp)
-    out << "/* --- Runtime Lisp intégré --- \n";
-    out << "typedef struct Node {\n";
-    out << "    int value;\n";
-    out << "    struct Node* next;\n";
-    out << "} Node;\n\n";
-
-    // cons : crée un nouveau nœud
-    out << "static Node* lisp_cons(int val, Node* next) {\n";
-    out << "    Node* n = (Node*)malloc(sizeof(Node));\n";
-    out << "    n->value = val;\n";
-    out << "    n->next  = next;\n";
-    out << "    return n;\n";
-    out << "}\n\n";
-
-    // car : retourne la valeur de tête
-    out << "static int lisp_car(Node* lst) {\n";
-    out << "    if (!lst) { fprintf(stderr, \"car: liste vide\\n\"); exit(1); }\n";
-    out << "    return lst->value;\n";
-    out << "}\n\n";
-
-    // cdr : retourne la queue
-    out << "static Node* lisp_cdr(Node* lst) {\n";
-    out << "    if (!lst) { fprintf(stderr, \"cdr: liste vide\\n\"); exit(1); }\n";
-    out << "    return lst->next;\n";
-    out << "}\n\n";
-
-    // null : vrai si la liste est vide
-    out << "static int lisp_null(Node* lst) {\n";
-    out << "    return lst == NULL;\n";
-    out << "}\n\n";
-
-    // atom : vrai pour un entier (toujours vrai ici car on n'a que des int)
-    out << "static int lisp_atom(int x) {\n";
-    out << "    (void)x;\n";
-    out << "    return 1;\n";
-    out << "}\n\n";
-
-    out << "/* --- Fin du runtime --- \n\n";
-    */
 }
 
+void CGenerator::emitGlobals(const IRProgram& program, std::ostream& out) {
+    auto used = computeUsed(program.mainBlock);  // ← utilise computeUsed
+    auto decls = collectDecls(program.mainBlock, used);
 
-// =============================================================================
-// SECTION 2 : Fonctions (lambdas)
-// =============================================================================
-//
-// Chaque fonction est écrite AVANT le main() pour éviter les problèmes
-// d'ordre de définition en C.
-//
-// Format produit :
-//
-//   int __fn0(int x, int y) {
-//       /* déclarations des temporaires */
-//       int t0;
-//       /* corps */
-//       t0 = x + y;
-//       return t0;
-//   }
-//
+    if (decls.empty()) return;
+
+    out << "/* --- Variables globales --- */\n";
+    for (const auto& [type, name] : decls)
+        out << irTypeToC(type) << " " << name << ";\n";
+    out << "\n";
+}
 
 void CGenerator::emitFunctions(const IRProgram& program, std::ostream& out) {
     auto used = collectUsedFunctions(program);
@@ -172,87 +109,67 @@ void CGenerator::emitFunctions(const IRProgram& program, std::ostream& out) {
     }
 }
 
-// =============================================================================
-// SECTION 3 : Main
-// =============================================================================
-
 void CGenerator::emitMain(const IRProgram& program, std::ostream& out) {
     out << "int main(void) {\n";
-    emitBlock(program.mainBlock, out, 1);
-    // Si le bloc ne se termine pas déjà par un return, on ajoute return 0
-    bool hasReturn = false;
-    for (const auto& instr : program.mainBlock.instructions) {
-        if (std::holds_alternative<IR_Return>(instr)) { hasReturn = true; break; }
+
+    auto used = computeUsed(program.mainBlock);  // ← utilise computeUsed
+
+    const auto& instrs = program.mainBlock.instructions;
+    size_t i = 0;
+    while (i < instrs.size()) {
+        if (std::holds_alternative<IR_Assign>(instrs[i])) {
+            const auto& a = std::get<IR_Assign>(instrs[i]);
+            if (!used.count(a.dest)) { ++i; continue; }
+        }
+        else if (std::holds_alternative<IR_BinOp>(instrs[i])) {
+            const auto& b = std::get<IR_BinOp>(instrs[i]);
+            if (!used.count(b.dest)) { ++i; continue; }
+        }
+        else if (std::holds_alternative<IR_Call>(instrs[i])) {
+            const auto& c = std::get<IR_Call>(instrs[i]);
+            if (!c.dest.empty() && !used.count(c.dest)) { ++i; continue; }
+        }
+
+        if (std::holds_alternative<IR_CondJump>(instrs[i])) {
+            i = emitIfElse(instrs, i, out, 1, used);
+        } else {
+            emitInstruction(instrs[i], out, 1);
+            ++i;
+        }
     }
-    if (!hasReturn) {
-        out << indent(1) << "return 0;\n";
-    }
+
+    out << indent(1) << "return 0;\n";
     out << "}\n";
 }
 
-// =============================================================================
-// SECTION 4 : Émission d'un bloc
-// =============================================================================
-//
-// Un bloc se traduit en deux temps :
-//   1. On collecte toutes les variables à déclarer (temporaires + variables
-//      setq qui ne sont pas des paramètres).
-//   2. On émet les déclarations, puis les instructions.
-//
-
 void CGenerator::emitBlock(const IR_Block& block, std::ostream& out, int indentLevel) {
+    auto used = computeUsed(block);  // ← utilise computeUsed
 
-    // Calcule les variables vivantes
-    std::unordered_set<std::string> used;
-    for (const auto& instr : block.instructions) {
-        if (std::holds_alternative<IR_Assign>(instr)) {
-            const auto& a = std::get<IR_Assign>(instr);
-            if (!isLiteral(a.src)) used.insert(a.src);
-        }
-        else if (std::holds_alternative<IR_BinOp>(instr)) {
-            const auto& b = std::get<IR_BinOp>(instr);
-            if (!used.count(b.dest)) { continue; }
-            if (!isLiteral(b.left))  used.insert(b.left);
-            if (!isLiteral(b.right)) used.insert(b.right);
-        }
-        else if (std::holds_alternative<IR_Call>(instr)) {
-            for (const auto& arg : std::get<IR_Call>(instr).args)
-                if (!isLiteral(arg)) used.insert(arg);
-                if (!arg.dest.empty() && !used.count(arg.dest)) { continue; }
-
-        }
-        else if (std::holds_alternative<IR_Print>(instr)) {
-            const auto& p = std::get<IR_Print>(instr);
-            if (!isLiteral(p.value)) used.insert(p.value);
-        }
-        else if (std::holds_alternative<IR_CondJump>(instr)) {
-            const auto& j = std::get<IR_CondJump>(instr);
-            if (!isLiteral(j.condition)) used.insert(j.condition);
-        }
-        else if (std::holds_alternative<IR_Return>(instr)) {
-            const auto& r = std::get<IR_Return>(instr);
-            if (!isLiteral(r.value)) used.insert(r.value);
-        }
-    }
-
-    // Déclarations filtrées
-    auto decls = collectDecls(block, used);  // ← passe used
+    auto decls = collectDecls(block, used);
     if (!decls.empty()) {
         for (const auto& [type, name] : decls)
             out << indent(indentLevel) << irTypeToC(type) << " " << name << ";\n";
         out << "\n";
     }
 
-    // Instructions — filtre les assignations vers variables mortes
     const auto& instrs = block.instructions;
     size_t i = 0;
     while (i < instrs.size()) {
         if (std::holds_alternative<IR_Assign>(instrs[i])) {
             const auto& a = std::get<IR_Assign>(instrs[i]);
-            if (!used.count(a.dest)) { ++i; continue; }  // ← ignore si mort
+            if (!used.count(a.dest)) { ++i; continue; }
         }
+        else if (std::holds_alternative<IR_BinOp>(instrs[i])) {
+            const auto& b = std::get<IR_BinOp>(instrs[i]);
+            if (!used.count(b.dest)) { ++i; continue; }
+        }
+        else if (std::holds_alternative<IR_Call>(instrs[i])) {
+            const auto& c = std::get<IR_Call>(instrs[i]);
+            if (!c.dest.empty() && !used.count(c.dest)) { ++i; continue; }
+        }
+
         if (std::holds_alternative<IR_CondJump>(instrs[i])) {
-            i = emitIfElse(instrs, i, out, indentLevel);
+            i = emitIfElse(instrs, i, out, indentLevel, used);
         } else {
             emitInstruction(instrs[i], out, indentLevel);
             ++i;
@@ -260,8 +177,7 @@ void CGenerator::emitBlock(const IR_Block& block, std::ostream& out, int indentL
     }
 }
 
-size_t CGenerator::emitIfElse(const std::vector<IRInstruction>& instrs,
-                               size_t i, std::ostream& out, int indentLevel) {
+size_t CGenerator::emitIfElse(const std::vector<IRInstruction>& instrs, size_t i, std::ostream& out, int indentLevel, const std::unordered_set<std::string>& used) {
     const auto& cj = std::get<IR_CondJump>(instrs[i]);
     std::string labelElse = cj.labelFalse;
     std::string labelEnd;
@@ -274,10 +190,22 @@ size_t CGenerator::emitIfElse(const std::vector<IRInstruction>& instrs,
     out << indent(indentLevel) << "if (" << cj.condition << ") {\n";
     while (i < instrs.size() && !std::holds_alternative<IR_Jump>(instrs[i])) {
         if (std::holds_alternative<IR_CondJump>(instrs[i])) {
-            i = emitIfElse(instrs, i, out, indentLevel + 1);
+            i = emitIfElse(instrs, i, out, indentLevel + 1, used);
         } else if (std::holds_alternative<IR_Assign>(instrs[i])) {
             const auto& a = std::get<IR_Assign>(instrs[i]);
             if (!a.src.empty()) emitInstruction(instrs[i], out, indentLevel + 1);
+            ++i;
+        } else if (std::holds_alternative<IR_Assign>(instrs[i])) {
+            const auto& a = std::get<IR_Assign>(instrs[i]);
+            if (used.count(a.dest)) emitInstruction(instrs[i], out, indentLevel + 1);
+            ++i;
+        } else if (std::holds_alternative<IR_BinOp>(instrs[i])) {
+            const auto& b = std::get<IR_BinOp>(instrs[i]);
+            if (used.count(b.dest)) emitInstruction(instrs[i], out, indentLevel + 1);
+            ++i;
+        } else if (std::holds_alternative<IR_Call>(instrs[i])) {
+            const auto& c = std::get<IR_Call>(instrs[i]);
+            if (c.dest.empty() || used.count(c.dest)) emitInstruction(instrs[i], out, indentLevel + 1);
             ++i;
         } else {
             emitInstruction(instrs[i], out, indentLevel + 1);
@@ -308,7 +236,7 @@ size_t CGenerator::emitIfElse(const std::vector<IRInstruction>& instrs,
                 std::get<IR_Label>(instrs[i]).name == labelEnd) break;
 
             if (std::holds_alternative<IR_CondJump>(instrs[i])) {
-                i = emitIfElse(instrs, i, out, indentLevel + 1);
+                    i = emitIfElse(instrs, i, out, indentLevel + 1, used);
             } else if (std::holds_alternative<IR_Assign>(instrs[i])) {
                 const auto& a = std::get<IR_Assign>(instrs[i]);
                 if (!a.src.empty()) emitInstruction(instrs[i], out, indentLevel + 1);
@@ -328,25 +256,7 @@ size_t CGenerator::emitIfElse(const std::vector<IRInstruction>& instrs,
     return i;
 }
 
-// =============================================================================
-// SECTION 5 : Collecte des déclarations
-// =============================================================================
-//
-// On parcourt toutes les instructions et on collecte les "dest" qui sont :
-//   - Des temporaires (t0, t1...) — toujours déclarés ici
-//   - Des variables utilisateur (setq) — déclarées ici aussi
-//
-// On exclut :
-//   - Les constantes littérales (42, "hello", etc.)
-//   - Les chaînes vides (instructions void)
-//
-// On utilise une ordered_map pour garder l'ordre de première apparition
-// tout en évitant les doublons.
-//
-
-std::vector<std::pair<IRType, std::string>> CGenerator::collectDecls(
-    const IR_Block& block,
-    const std::unordered_set<std::string>& used) {
+std::vector<std::pair<IRType, std::string>> CGenerator::collectDecls(const IR_Block& block, const std::unordered_set<std::string>& used) {
 
     std::vector<std::pair<IRType, std::string>> result;
     std::unordered_map<std::string, bool> seen;
@@ -375,19 +285,7 @@ std::vector<std::pair<IRType, std::string>> CGenerator::collectDecls(
         }
     }
     return result;
-}// =============================================================================
-// SECTION 6 : Traduction d'une instruction
-// =============================================================================
-//
-// C'est ici qu'on mappe chaque IRInstruction vers sa syntaxe C.
-// On utilise std::holds_alternative + std::get pour inspecter le variant.
-//
-// NOTE sur les labels en C :
-//   Un label doit être suivi d'une instruction. Si le label est en fin de
-//   bloc, on ajoute un ";" vide : "L_end_0: ;"
-//
-
-//ostream operator<<(int _cpp_par_, int _cpp_par_);
+}
 
 void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, int indentLevel) {
 
@@ -398,6 +296,8 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
 
         if (a.src == "NULL") {
             out << "0";
+        } else if (a.type == IRType::STRING && isLiteral(a.src)) {
+            out << "ENCODE_STR(" << a.src << ")";  // ← string dans lisp_obj
         } else if (a.type == IRType::INT && isLiteral(a.src)) {
             out << "ENCODE_INT(" << a.src << ")";
         } else {
@@ -420,26 +320,19 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
     if (std::holds_alternative<IR_Call>(instr)) {
         const auto& c = std::get<IR_Call>(instr);
         out << indent(indentLevel);
-
-        // Si la fonction retourne quelque chose, on l'assigne à dest
-        if (!c.dest.empty()) {
-            out << c.dest << " = ";
-        }
-
-        // On écrit le nom de la fonction (ex: lisp_cons, lisp_car, ou une fonction utilisateur)
+        if (!c.dest.empty()) out << c.dest << " = ";
         out << c.funcName << "(";
-
         for (size_t i = 0; i < c.args.size(); ++i) {
             std::string arg = c.args[i];
-
             if (arg == "NULL") {
-                out << "0"; // NIL est 0 dans notre système lisp_obj
-            } else if (isLiteral(arg) && arg[0] != '"') {
+                out << "0";
+            } else if (isLiteral(arg) && !arg.empty() && arg[0] == '"') {
+                out << "ENCODE_STR(" << arg << ")";  // ← au lieu de (lisp_obj)
+            } else if (isLiteral(arg) && arg != "0") {
                 out << "ENCODE_INT(" << arg << ")";
             } else {
                 out << arg;
             }
-
             if (i + 1 < c.args.size()) out << ", ";
         }
         out << ");\n";
@@ -480,13 +373,18 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
     // --- IR_Print ---
     if (auto* p = std::get_if<IR_Print>(&instr)) {
         out << indent(indentLevel);
-
-        // Si la valeur commence par une guillemet, c'est du texte brut
         if (!p->value.empty() && p->value[0] == '"') {
             out << "printf(\"%s\\n\", " << p->value << ");\n";
-        }
-        // Sinon, c'est un lisp_obj (t0, t1, nums...), on doit DECODER et afficher un nombre
-        else {
+        } else if (p->type == IRType::STRING) {
+            out << "printf(\"%s\\n\", " << p->value << ");\n";
+        } else if (p->type == IRType::FLOAT) {
+            out << "printf(\"%f\\n\", " << p->value << ");\n";
+        } else if (p->type == IRType::STRING) {
+            // Vérifie si c'est un lisp_obj encodé ou une char* directe
+            out << "if (IS_STR(" << p->value << ")) "
+                << "printf(\"%s\\n\", DECODE_STR(" << p->value << ")); "
+                << "else printf(\"%ld\\n\", (long)DECODE_INT(" << p->value << "));\n";
+        } else {
             out << "printf(\"%ld\\n\", (long)DECODE_INT(" << p->value << "));\n";
         }
         return;
@@ -622,5 +520,74 @@ std::unordered_set<std::string> CGenerator::collectUsedFunctions(const IRProgram
             }
         }
     }
+    return used;
+}
+
+std::unordered_set<std::string> CGenerator::computeUsed(const IR_Block& block) {
+    std::unordered_set<std::string> used;
+
+    // Passe 1 : collecte uniquement les "racines" — variables consommées
+    // par des instructions sans dest (print, condJump, return, call void)
+    for (const auto& instr : block.instructions) {
+        if (std::holds_alternative<IR_Print>(instr)) {
+            const auto& p = std::get<IR_Print>(instr);
+            if (!isLiteral(p.value)) used.insert(p.value);
+        }
+        else if (std::holds_alternative<IR_CondJump>(instr)) {
+            const auto& j = std::get<IR_CondJump>(instr);
+            if (!isLiteral(j.condition)) used.insert(j.condition);
+        }
+        else if (std::holds_alternative<IR_Return>(instr)) {
+            const auto& r = std::get<IR_Return>(instr);
+            if (!r.value.empty() && !isLiteral(r.value)) used.insert(r.value);
+        }
+        else if (std::holds_alternative<IR_Call>(instr)) {
+            const auto& c = std::get<IR_Call>(instr);
+            // Call void (pas de dest) → ses args sont racines
+            if (c.dest.empty()) {
+                for (const auto& arg : c.args)
+                    if (!isLiteral(arg)) used.insert(arg);
+            }
+        }
+        else if (std::holds_alternative<IR_Scan>(instr)) {
+            const auto& s = std::get<IR_Scan>(instr);
+            if (!isLiteral(s.dest)) used.insert(s.dest);
+        }
+    }
+
+    // Passe 2 : propagation en cascade
+    // Si dest est dans used → ses sources le deviennent aussi
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (const auto& instr : block.instructions) {
+            if (std::holds_alternative<IR_BinOp>(instr)) {
+                const auto& b = std::get<IR_BinOp>(instr);
+                if (used.count(b.dest)) {
+                    if (!isLiteral(b.left) && !used.count(b.left))   { used.insert(b.left);  changed = true; }
+                    if (!isLiteral(b.right) && !used.count(b.right)) { used.insert(b.right); changed = true; }
+                }
+            }
+            else if (std::holds_alternative<IR_Assign>(instr)) {
+                const auto& a = std::get<IR_Assign>(instr);
+                if (used.count(a.dest) && !isLiteral(a.src) && !used.count(a.src)) {
+                    used.insert(a.src);
+                    changed = true;
+                }
+            }
+            else if (std::holds_alternative<IR_Call>(instr)) {
+                const auto& c = std::get<IR_Call>(instr);
+                if (!c.dest.empty() && used.count(c.dest)) {
+                    for (const auto& arg : c.args) {
+                        if (!isLiteral(arg) && !used.count(arg)) {
+                            used.insert(arg);
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     return used;
 }
