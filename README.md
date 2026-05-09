@@ -18,7 +18,7 @@ Sur Ubuntu/Debian :
 sudo apt install cmake g++ gcc graphviz
 ```
 
-### Installer JuliesSP
+### Installer JulieSP
 
 ```bash
 git clone https://github.com/<ton-compte>/juliesp
@@ -66,7 +66,7 @@ juliesp <fichier.jlsp> [options]
 ### Exemples
 
 ```bash
-# Compiler un programme JuliesSP vers C
+# Compiler un programme JulieSP vers C
 juliesp programme.jlsp
 
 # Compiler vers un fichier C spécifique
@@ -93,12 +93,24 @@ juliesp programme.jlsp --sem-only
 
 ---
 
-## Syntaxe JuliesSP
+## Manuel
+
+Après installation, la page de manuel complète est accessible dans le terminal :
+
+```bash
+man juliesp
+```
+
+Elle contient la liste complète des options, la syntaxe du langage, les primitives de listes et la bibliothèque standard.
+
+---
+
+## Syntaxe JulieSP
 
 ### Formes spéciales
 
-| JuliesSP | Lisp standard | Description |
-|----------|---------------|-------------|
+| JulieSP | Lisp standard | Description |
+|---------|---------------|-------------|
 | `: x 42` | `setq x 42` | Assignation de variable |
 | `? cond then else` | `if cond then else` | Condition |
 | `£ (params) corps` | `lambda (params) corps` | Fonction anonyme |
@@ -110,8 +122,8 @@ juliesp programme.jlsp --sem-only
 
 ### Primitives de listes
 
-| JuliesSP | Lisp standard | Description |
-|----------|---------------|-------------|
+| JulieSP | Lisp standard | Description |
+|---------|---------------|-------------|
 | `<< lst` | `car lst` | Premier élément |
 | `>> lst` | `cdr lst` | Reste de la liste |
 | `& val lst` | `cons val lst` | Construire une liste |
@@ -129,8 +141,8 @@ juliesp programme.jlsp --sem-only
 
 ### Littéraux
 
-| JuliesSP | Description |
-|----------|-------------|
+| JulieSP | Description |
+|---------|-------------|
 | `42` | Entier |
 | `3.14` | Flottant |
 | `"hello"` | Chaîne |
@@ -196,7 +208,7 @@ Si `juliesp` n'est pas encore installé globalement :
 ### Résultat attendu
 
 ```
-  JuliesSP — Suite de tests unitaires
+  JulieSP — Suite de tests unitaires
   =====================================
 
   [PASS] unit_01_variables.jlsp
@@ -233,24 +245,15 @@ Si `juliesp` n'est pas encore installé globalement :
 
 ---
 
-## Runtime
-
-Le fichier `juliesp_runtime.h` est installé dans `/usr/local/include`. Il est automatiquement inclus dans tout fichier C généré et fournit le support pour les listes Lisp via un système de valeurs taguées (`lisp_obj`).
-
-Les listes peuvent contenir des **entiers** et des **chaînes de caractères**.
-
----
-
 ## Bibliothèque standard — julib
 
-JulieSP inclut une bibliothèque standard `julib.jlsp` située dans le dossier `lib/`. Elle fournit des fonctions utilitaires prêtes à l'emploi.
+JulieSP inclut une bibliothèque standard `julib.jlsp` dans le dossier `lib/`.
 
 ### Utilisation
 
 ```lisp
 ($ "lib/julib.jlsp")
 
-§§ Utilise ensuite les fonctions directement
 (€ (factorielle 5))
 (€ (longueur (& 1 (& 2 (& 3 ²())))))
 (€ (max2 10 42))
@@ -307,3 +310,7 @@ Le fichier `juliesp_runtime.h` est installé dans `/usr/local/include`. Il est a
 Les listes peuvent contenir des **entiers** et des **chaînes de caractères**.
 
 ---
+
+## Licence
+
+MIT
