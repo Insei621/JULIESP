@@ -18,7 +18,7 @@ Sur Ubuntu/Debian :
 sudo apt install cmake g++ gcc graphviz
 ```
 
-### Installer JulieSP
+### Installer Juliesp
 
 ```bash
 git clone https://github.com/Insei621/juliesp
