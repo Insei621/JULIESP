@@ -1,0 +1,6 @@
+# Forcer les fins de ligne LF pour tous les fichiers texte
+* text=auto eol=lf
+
+# Explicitement pour les scripts shell
+*.sh text eol=lf
+run_tests.sh text eol=lf
