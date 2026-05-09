@@ -113,6 +113,17 @@ Elle contient la liste complète des options, la syntaxe du langage, les primiti
 
 ---
 
+## Documentation
+
+| Fichier | Contenu |
+|---------|---------|
+| [LANGUAGE.md](LANGUAGE.md) | Documentation technique complète — pipeline, tokens, grammaire, limitations, julib, runtime |
+| [LEXEME.md](LEXEME.md) | Référence rapide des tokens — imprimable |
+
+> Pour aller plus loin que ce README, consultez `LANGUAGE.md`.
+ 
+---
+
 ## Syntaxe JulieSP
 
 ### Formes spéciales
@@ -215,7 +226,7 @@ Si `juliesp` n'est pas encore installé globalement :
 ### Résultat attendu
 
 ```
-  JulieSP — Suite de tests unitaires
+  JULIESP — Suite de tests unitaires
   =====================================
 
   [PASS] unit_01_variables.jlsp
