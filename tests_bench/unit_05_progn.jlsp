@@ -1,0 +1,33 @@
+§§ =============================================================
+§§ UNIT_05 — Progn (séquence)
+§§ Résultats attendus dans l'ordre :
+§§   "A"  "B"  "C"  42  "ok"  22  "done"
+§§ =============================================================
+
+§§ [U05-01] Progn simple — exécution séquentielle
+(;
+    (€ "A")
+    (€ "B")
+    (€ "C"))
+
+§§ [U05-02] Progn avec déclaration locale
+(;
+    (: val 42)
+    (€ val))
+
+§§ [U05-03] Progn dans branche then d'un if
+(? µ
+   (;
+       (€ "ok")
+       (: r (+ 10 12))
+       (€ r))
+   (€ "ERREUR"))
+
+§§ [U05-04] Progn dans une lambda
+(: traiter (£ (x)
+    (;
+        (: double (* x 2))
+        (€ double)
+        (€ "done"))))
+
+(traiter 11)

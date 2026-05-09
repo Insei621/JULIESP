@@ -11,7 +11,7 @@
 class Parser {
 public:
     // Constructeur : on passe le vecteur de tokens issus du Lexer
-    explicit Parser(std::vector<Token> t);
+    explicit Parser(std::vector<Token> t, std::string sourceDir = "");
 
     // --- Les 3 méthodes demandées ---
 
@@ -33,6 +33,9 @@ public:
 private:
     std::vector<Token> tokens;
     size_t current = 0;
+
+    // Répertoire du fichier source
+    std::string sourceDir_;
 
     // Méthodes de parsing récursif
     ASTNode* parseElement(bool quoted = false);

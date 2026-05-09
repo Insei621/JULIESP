@@ -1,0 +1,49 @@
+§§ =============================================================
+§§ UNIT_03 — Conditions (if / ?)
+§§ Résultats attendus dans l'ordre :
+§§   "vrai"  "faux"  "vrai"  "faux"  "vrai"  "suite"
+§§   "bien"  "moyen"  "nul"
+§§ =============================================================
+
+§§ [U03-01] Condition vraie → branche then
+(? µ (€ "vrai") (€ "ERREUR"))
+
+§§ [U03-02] Condition fausse → branche else
+(? ù (€ "ERREUR") (€ "faux"))
+
+§§ [U03-03] Comparaison > vraie → then
+(? (> 10 5) (€ "vrai") (€ "ERREUR"))
+
+§§ [U03-04] Comparaison > fausse → else
+(? (> 5 10) (€ "ERREUR") (€ "faux"))
+
+§§ [U03-05] Comparaison = vraie → then
+(? (= 7 7) (€ "vrai") (€ "ERREUR"))
+
+§§ [U03-06] If sans else — condition vraie → then puis suite
+(? µ (€ "suite"))
+(€ "suite")
+
+§§ [U03-07] If imbriqué — note = 95 → "bien"
+(: note 95)
+(? (> note 90)
+   (€ "bien")
+   (? (> note 50)
+      (€ "moyen")
+      (€ "nul")))
+
+§§ [U03-08] If imbriqué — note = 70 → "moyen"
+(: note 70)
+(? (> note 90)
+   (€ "bien")
+   (? (> note 50)
+      (€ "moyen")
+      (€ "nul")))
+
+§§ [U03-09] If imbriqué — note = 10 → "nul"
+(: note 10)
+(? (> note 90)
+   (€ "bien")
+   (? (> note 50)
+      (€ "moyen")
+      (€ "nul")))

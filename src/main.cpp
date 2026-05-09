@@ -1,111 +1,286 @@
+//
+// main.cpp — Point d'entrée du compilateur JuliesSP
+//
 
 #include "../include/pch.h"
 #include "../include/Lexer.h"
 #include "../include/Parser.h"
 #include "../include/PrettyPrinter.h"
 #include "../include/GraphvizVisitor.h"
-#include "../tests_bench/Lexer_tb.hpp"
 #include "../include/SemanticAnalyzer.h"
+#include "../include/IRGenerator.h"
+#include "../include/CGenerator.h"
 
 #include <iostream>
-#include <cstring> // strcmp
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <cstring>
+#include <filesystem>
 
+// =============================================================================
+// Affichage de l'aide
+// =============================================================================
 
+void printHelp(const char* progName) {
+    std::cout << "\n";
+    std::cout << "  juliesp — Compilateur du langage JuliesSP\n";
+    std::cout << "\n";
+    std::cout << "Usage:\n";
+    std::cout << "  " << progName << " <fichier.jlsp> [options]\n";
+    std::cout << "\n";
+    std::cout << "Options de sortie:\n";
+    std::cout << "  -o, --output <fichier.c>   Fichier de sortie C (défaut: output/output.c)\n";
+    std::cout << "  -c, --compile              Compile le C généré avec gcc\n";
+    std::cout << "\n";
+    std::cout << "Options de debug:\n";
+    std::cout << "  -dl, --dump-lex            Affiche les tokens\n";
+    std::cout << "  -da, --dump-ast            Affiche l'AST dans le terminal\n";
+    std::cout << "  -di, --dump-imgast         Génère AST_Graphe/ast.png\n";
+    std::cout << "  -dr, --dump-ir             Affiche la représentation intermédiaire\n";
+    std::cout << "\n";
+    std::cout << "Options de pipeline:\n";
+    std::cout << "  --lex-only                 S'arrête après le lexage\n";
+    std::cout << "  --parse-only               S'arrête après le parsing\n";
+    std::cout << "  --sem-only                 S'arrête après l'analyse sémantique\n";
+    std::cout << "  --ir-only                  S'arrête après la génération IR\n";
+    std::cout << "\n";
+    std::cout << "  -h, --help                 Affiche cette aide\n";
+    std::cout << "\n";
+    std::cout << "Exemples:\n";
+    std::cout << "  " << progName << " programme.jlsp\n";
+    std::cout << "  " << progName << " programme.jlsp -o mon_prog.c\n";
+    std::cout << "  " << progName << " programme.jlsp -c\n";
+    std::cout << "  " << progName << " programme.jlsp -da -dr\n";
+    std::cout << "  " << progName << " programme.jlsp -di\n";
+    std::cout << "\n";
+}
+
+// =============================================================================
+// Lecture d'un fichier source
+// =============================================================================
+
+std::string readSourceFile(const std::string& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        std::cerr << "\033[1;31m[Erreur]\033[0m Impossible d'ouvrir le fichier : "
+                  << path << "\n";
+        exit(1);
+    }
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    return ss.str();
+}
+
+// =============================================================================
+// Point d'entrée
+// =============================================================================
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " commande\n";
+
+    // --- Aide ---
+    if (argc < 2
+        || std::strcmp(argv[1], "--help") == 0
+        || std::strcmp(argv[1], "-h") == 0) {
+        printHelp(argv[0]);
+        return (argc < 2) ? 2 : 0;
+    }
+
+    // --- Parsing des arguments ---
+    std::string sourceFile  = argv[1];
+    std::string outputFile  = "output/output.c";
+    bool dumpLex       = false;
+    bool dumpAst       = false;
+    bool dumpImgAst    = false;
+    bool dumpIR        = false;
+    bool lexOnly       = false;
+    bool parseOnly     = false;
+    bool semOnly       = false;
+    bool irOnly        = false;
+    bool compileOutput = false;
+
+    for (int i = 2; i < argc; ++i) {
+        std::string arg = argv[i];
+
+        // Sortie
+        if (arg == "-o" || arg == "--output") {
+            if (i + 1 >= argc) {
+                std::cerr << "\033[1;31m[Erreur]\033[0m "
+                          << arg << " attend un nom de fichier.\n";
+                return 2;
+            }
+            outputFile = argv[++i];
+        }
+        else if (arg == "-c"  || arg == "--compile")     compileOutput = true;
+
+        // Debug
+        else if (arg == "-dl" || arg == "--dump-lex")    dumpLex       = true;
+        else if (arg == "-da" || arg == "--dump-ast")    dumpAst       = true;
+        else if (arg == "-di" || arg == "--dump-imgast") dumpImgAst    = true;
+        else if (arg == "-dr" || arg == "--dump-ir")     dumpIR        = true;
+
+        // Pipeline
+        else if (arg == "--lex-only")                    lexOnly       = true;
+        else if (arg == "--parse-only")                  parseOnly     = true;
+        else if (arg == "--sem-only")                    semOnly       = true;
+        else if (arg == "--ir-only")                     irOnly        = true;
+
+        else {
+            std::cerr << "\033[1;31m[Erreur]\033[0m Option inconnue : " << arg << "\n";
+            std::cerr << "Utilisez -h pour voir les options disponibles.\n";
+            return 2;
+        }
+    }
+
+    std::cout << "\033[1;34m[juliesp]\033[0m Compilation de : " << sourceFile << "\n";
+
+    // ==========================================================================
+    // ÉTAPE 1 : Lecture du fichier source
+    // ==========================================================================
+
+    std::string source = readSourceFile(sourceFile);
+
+    // ==========================================================================
+    // ÉTAPE 2 : Analyse lexicale
+    // ==========================================================================
+
+    Lexer lexer(source);
+    std::vector<Token> tokens = lexer.tokenize();
+
+    if (dumpLex) {
+        std::cout << "\n=== DUMP LEX ===\n";
+        std::cout << std::left
+                  << std::setw(20) << "TYPE"
+                  << std::setw(25) << "VALUE"
+                  << std::setw(8)  << "LINE"
+                  << std::setw(8)  << "COL"  << "\n";
+        std::cout << std::string(61, '-') << "\n";
+        for (const auto& tok : tokens) {
+            std::cout << std::left
+                      << std::setw(20) << static_cast<int>(tok.type)
+                      << std::setw(25) << tok.value
+                      << std::setw(8)  << tok.line
+                      << std::setw(8)  << tok.cursor << "\n";
+        }
+        std::cout << "\n";
+    }
+
+    if (lexOnly) return 0;
+
+    // ==========================================================================
+    // ÉTAPE 3 : Analyse syntaxique
+    // ==========================================================================
+
+    std::string sourceDir = std::filesystem::path(sourceFile)
+                            .parent_path()
+                            .string();
+
+    Parser parser(tokens, sourceDir);
+    ASTNode* root = nullptr;
+
+    try {
+        std::vector<ASTNode*> programNodes = parser.parseProgram();
+        SExpr* rootExpr = new SExpr(0, 0, false);
+        for (ASTNode* node : programNodes)
+            rootExpr->add(node);
+        root = rootExpr;
+
+        std::cout << "\033[1;32m[Succès]\033[0m Analyse syntaxique terminée ("
+                  << programNodes.size() << " expressions).\n";
+    } catch (const std::exception& e) {
+        std::cerr << "\033[1;31m[Erreur Syntaxique]\033[0m " << e.what() << "\n";
         return 1;
     }
 
-    if (std::strcmp(argv[1], "LEX_TEST") == 0) {
-        run_test();
-        return 0;
+    if (dumpAst) {
+        std::cout << "\n=== DUMP AST ===\n";
+        PrettyPrinter printer;
+        root->accept(&printer);
+        std::cout << "\n";
     }
 
-    /// Analyse lexicale
-    Lexer lexer(argv[1]);   //on passe le code source en paramètre
-    std::vector<Token> tokens = lexer.tokenize();
+    if (dumpImgAst) {
+        std::filesystem::create_directories("AST_Graphe");
+        std::ofstream dotFile("AST_Graphe/ast.dot");
+        dotFile << "digraph G {\n";
+        GraphvizVisitor gv(dotFile);
+        root->accept(&gv);
+        dotFile << "}\n";
+        dotFile.close();
+        system("dot -Tpng AST_Graphe/ast.dot -o AST_Graphe/ast.png");
+        std::cout << "\033[1;32m[juliesp]\033[0m Image AST : AST_Graphe/ast.png\n";
+    }
 
-    /// Analyse syntaxique et construction de l'AST
-    Parser parser(tokens);
-    ASTNode* root = parser.parse();
+    if (parseOnly) return 0;
 
-    /// Impression de l'AST avec le PrettyPrinter
-    PrettyPrinter printer;
-    root->accept(&printer);
-    std::cout << std::endl;
+    // ==========================================================================
+    // ÉTAPE 4 : Analyse sémantique
+    // ==========================================================================
 
-    /// Impression du graphe de l'AST
-    std::ofstream dotFile("AST_Graphe/ast.dot");//Impression de l'AST dans un fichier pour pouvoir visualiser le graphique
-    dotFile << "digraph G {\n";
-    GraphvizVisitor gv(dotFile);
-    root->accept(&gv);
-    dotFile << "}\n";
-    dotFile.close();
-    system("dot -Tpng AST_Graphe/ast.dot -o AST_Graphe/ast.png");
+    SemanticAnalyzer semantic;
+    try {
+        semantic.analyze(root);
+    } catch (const std::exception& e) {
+        std::cerr << "\033[1;31m[Erreur Sémantique]\033[0m " << e.what() << "\n";
+        return 1;
+    }
 
-    /// Analyse Sémantique
-    SemanticAnalyzer SemanticAnalyzer;
+    if (semOnly) return 0;
 
+    // ==========================================================================
+    // ÉTAPE 5 : Génération IR
+    // ==========================================================================
 
+    IRGenerator irGen;
+    IRProgram ir = irGen.generate(root);
 
-    return 0;
+    if (dumpIR) {
+        std::cout << "\n";
+        irGen.dumpIR(ir);
+        std::cout << "\n";
+    }
 
+    if (irOnly) return 0;
 
+    // ==========================================================================
+    // ÉTAPE 6 : Génération C
+    // ==========================================================================
 
+    try {
+        auto outPath = std::filesystem::path(outputFile);
+        if (outPath.has_parent_path())
+            std::filesystem::create_directories(outPath.parent_path());
 
-}
-/*
-#include <iostream>
-#include <vector>
-#include "Parser.h"
-#include "AST.h"
+        CGenerator cGen;
+        cGen.generateToFile(ir, outputFile);
+        std::cout << "\033[1;32m[juliesp]\033[0m Code C généré : " << outputFile << "\n";
+    } catch (const std::exception& e) {
+        std::cerr << "\033[1;31m[Erreur]\033[0m " << e.what() << "\n";
+        return 1;
+    }
 
-    int main() {
-        // On simule : {if {> x 5} "OK" "NON"}
-        // Cela permet de tester :
-        // 1. Le IF
-        // 2. Une S-Expression imbriquée (le calcul >)
-        // 3. Des Atomes de types différents (Identifiant, Entier, String)
+    // ==========================================================================
+    // ÉTAPE 7 (optionnelle) : Compilation gcc
+    // ==========================================================================
 
-        std::vector<Token> mockTokens = {
-            {TokenType::DEL_LBRACE, "{", 1, 0},
-            {TokenType::CORE_IF,    "if", 1, 1},
-                {TokenType::DEL_LBRACE, "{", 1, 4},
-                {TokenType::CALC_SUP,   ">", 1, 5},
-                {TokenType::IDENT,      "x", 1, 7},
-                {TokenType::LIT_INT,    "5", 1, 9},
-                {TokenType::DEL_RBRACE, "}", 1, 10},
-            {TokenType::LIT_STRING, "OK", 1, 12},
-            {TokenType::LIT_STRING, "NON", 1, 17},
-            {TokenType::DEL_RBRACE, "}", 1, 21}
-        };
+    if (compileOutput) {
+        std::string binFile = outputFile;
+        if (binFile.size() > 2 && binFile.substr(binFile.size() - 2) == ".c")
+            binFile = binFile.substr(0, binFile.size() - 2);
 
-        try {
-            Parser parser(mockTokens);
+        std::string cmd = "gcc \"" + outputFile + "\" -o \"" + binFile
+                        + "\" -I/usr/local/include 2>&1";
 
-            // On lance le parsing à partir de parseElement
-            ASTNode* root = parser.parseElement();
+        std::cout << "\033[1;34m[juliesp]\033[0m Compilation gcc...\n";
+        int ret = system(cmd.c_str());
 
-            if (root) {
-                std::cout << "--- AST Arbre de Syntaxe Abstraite ---" << std::endl;
-                root->print(0); // 0 pour l'indentation de départ
-                std::cout << "--------------------------------------" << std::endl;
-
-                delete root; // N'oublie pas de nettoyer la mémoire !
-            }
-        } catch (const std::exception& e) {
-            std::cerr << "Erreur lors du test : " << e.what() << std::endl;
+        if (ret != 0) {
+            std::cerr << "\033[1;31m[Erreur]\033[0m Échec de la compilation gcc.\n";
+            return 1;
         }
-
-        return 0;
+        std::cout << "\033[1;32m[juliesp]\033[0m Binaire généré : " << binFile << "\n";
     }
 
-/// Analyse syntaxique
-//    Parser parser(tokens);
-
-
-
+    delete root;
+    return 0;
 }
-*/

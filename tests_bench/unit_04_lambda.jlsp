@@ -1,0 +1,34 @@
+§§ =============================================================
+§§ UNIT_04 — Lambda et fonctions
+§§ Résultats attendus dans l'ordre :
+§§   25  8  27  150  3  10  5
+§§ =============================================================
+
+§§ [U04-01] Lambda 1 param — carré → 25
+(: carre (£ (n) (* n n)))
+(€ (carre 5))
+
+§§ [U04-02] Lambda 2 params — addition → 8
+(: add (£ (a b) (+ a b)))
+(€ (add 3 5))
+
+§§ [U04-03] Lambda 2 params — multiplication → 27
+(: mul (£ (a b) (* a b)))
+(€ (mul 3 9))
+
+§§ [U04-04] Appel imbriqué — add(mul(5,6), mul(4,30)) = 30+120 = 150
+(€ (add (mul 5 6) (mul 4 30)))
+
+§§ [U04-05] Lambda avec condition — valeur absolue
+(: abs_val (£ (n) (? (> n 0) n (- 0 n))))
+(€ (abs_val -3))
+
+§§ [U04-06] Lambda avec accès variable globale
+(: base 7)
+(: ajouter_base (£ (n) (+ n base)))
+(€ (ajouter_base 3))
+
+§§ [U04-07] Lambda retournant résultat d'une autre fonction
+(: double (£ (n) (* n 2)))
+(: moitie (£ (n) (/ n 2))  )
+(€ (moitie (double 5)))

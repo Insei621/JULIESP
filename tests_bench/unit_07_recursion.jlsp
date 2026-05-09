@@ -1,0 +1,32 @@
+§§ =============================================================
+§§ UNIT_07 — Récursion
+§§ Résultats attendus dans l'ordre :
+§§   120  55  8  1
+§§ =============================================================
+
+§§ [U07-01] Factorielle récursive — 5! = 120
+(: factorielle (£ (n)
+    (? (= n 0)
+        1
+        (* n (factorielle (- n 1))))))
+
+(€ (factorielle 5))
+
+§§ [U07-02] Somme récursive 1..10 = 55
+(: somme (£ (n)
+    (? (= n 0)
+        0
+        (+ n (somme (- n 1))))))
+
+(€ (somme 10))
+
+§§ [U07-03] Fibonacci — fib(6) = 8
+(: fib (£ (n)
+    (? (< n 2)
+        n
+        (+ (fib (- n 1)) (fib (- n 2))))))
+
+(€ (fib 6))
+
+§§ [U07-04] Cas de base — fib(1) = 1
+(€ (fib 1))

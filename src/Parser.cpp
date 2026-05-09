@@ -5,7 +5,7 @@
 #include "../include/Parser.h"
 #include "../include/pch.h"
 
-Parser::Parser(std::vector<Token> t) : tokens(std::move(t)), current(0) {}
+Parser::Parser(std::vector<Token> t, std::string sourceDir) : tokens(std::move(t)), current(0), sourceDir_(std::move(sourceDir)) {}
 
 ASTNode* Parser::parse() {
     std::cout << "\033[1;34m[Parsing]\033[0m Lancement de l'analyse..." << std::endl;
@@ -31,33 +31,6 @@ ASTNode* Parser::parse() {
         throw; // On relance l'erreur pour qu'elle soit attrapée plus haut
     }
 }
-
-/*ASTNode* Parser::parse() {
-    // 1. On crée le conteneur racine
-    SExpr* root = new SExpr(showNext().line, showNext().cursor, false);
-
-    while (!isAtEnd() && showNext().type != TokenType::END_OF_FILE) {
-
-        // On sauvegarde l'index actuel pour vérifier si on avance
-        int lastIndex = current;
-
-        ASTNode* element = parseElement();
-
-        if (element != nullptr) {
-            root->add(element);
-        }
-
-        // --- SÉCURITÉ ANTI-BOUCLE ---
-        // Si l'index n'a pas bougé, c'est que parseElement a ignoré le token.
-        // On force l'avancement pour ne pas boucler à l'infini.
-        if (current == lastIndex) {
-            std::cerr << "[Parser Error] Stuck at token: " << showNext().value << std::endl;
-            acceptIt();
-        }
-    }
-
-    return root;
-}*/
 
 /// --- 1.Logique de parsing
 // 1. Retourne le lexème courant sans avancer
@@ -162,26 +135,6 @@ ASTNode* Parser::parseElement(bool quoted) {
 
     return parseAtom(quoted); // Transmet le "pinceau" à l'atome
 }
-
-/*
-ASTNode* Parser::parseElement(bool quoted) {
-    Token t = showNext();
-
-    // 1. Gestion du Quote (on propage l'état)
-    if (t.type == TokenType::CORE_QUOTE) {
-        acceptIt();
-        return parseElement(true);
-    }
-
-    // 2. Si c'est une parenthèse, on délègue à parseSExpr
-    if (t.type == TokenType::DEL_LBRACE) {
-        return parseSExpr(quoted);
-    }
-
-    // 3. Sinon, c'est obligatoirement un Atome (nombre, identifiant, etc.)
-    return parseAtom(quoted);
-}
-*/
 
 ASTNode* Parser::parseAtom(bool quoted) {
     Token t = showNext();

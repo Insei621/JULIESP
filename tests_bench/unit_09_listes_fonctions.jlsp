@@ -1,0 +1,42 @@
+§§ =============================================================
+§§ UNIT_09 — Primitives de listes dans des fonctions
+§§ Résultats attendus dans l'ordre :
+§§   10  20  30  1  0  6  1
+§§ =============================================================
+
+§§ Fonctions utilitaires sur les listes
+(: premier (£ (l) (<< l)))
+(: deuxieme (£ (l) (<< (>> l))))
+(: troisieme (£ (l) (<< (>> (>> l)))))
+(: est_vide (£ (l) (| l)))
+(: longueur_3 (£ (l)
+    (? (| l)
+        0
+        (+ 1 (? (| (>> l))
+                  0
+                  (+ 1 (? (| (>> (>> l)))
+                             0
+                             1)))))))
+
+(: lst (& 10 (& 20 (& 30 ²()))))
+
+§§ [U09-01] premier → 10
+(€ (premier lst))
+
+§§ [U09-02] deuxieme → 20
+(€ (deuxieme lst))
+
+§§ [U09-03] troisieme → 30
+(€ (troisieme lst))
+
+§§ [U09-04] est_vide sur liste vide → 1
+(€ (est_vide ²()))
+
+§§ [U09-05] est_vide sur liste non vide → 0
+(€ (est_vide lst))
+
+§§ [U09-06] longueur_3 → 6 (somme 1+2+3)
+(€ (longueur_3 lst))
+
+§§ [U09-07] atom? sur premier élément → 1 (c'est un entier)
+(€ (@ (premier lst)))

@@ -1,0 +1,25 @@
+§§ =============================================================
+§§ UNIT_10 — Strings et affichage
+§§ Résultats attendus dans l'ordre :
+§§   "hello"  "world"  "hello"  "msg"  "valeur: "  42
+§§ =============================================================
+
+§§ [U10-01] Affichage d'un littéral string
+(€ "hello")
+
+§§ [U10-02] Affichage d'une variable string
+(: s "world")
+(€ s)
+
+§§ [U10-03] Réassignation string
+(: s "hello")
+(€ s)
+
+§§ [U10-04] String dans une fonction
+(: afficher_msg (£ (m) (€ m)))
+(afficher_msg "msg")
+
+§§ [U10-05] Affichage string puis entier
+(€ "valeur: ")
+(: v 42)
+(€ v)

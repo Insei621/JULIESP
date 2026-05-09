@@ -1,0 +1,33 @@
+§§ =============================================================
+§§ UNIT_01 — Variables et types de base
+§§ Résultats attendus dans l'ordre :
+§§   42  10  3  0  100  0  1
+§§ =============================================================
+
+§§ [U01-01] Déclaration et lecture d'un entier
+(: x 42)
+(€ x)
+
+§§ [U01-02] Déclaration et lecture d'un second entier
+(: y 10)
+(€ y)
+
+§§ [U01-03] Flottant (affiché tronqué en int via DECODE_INT)
+(: pi 3.14)
+(€ pi)
+
+§§ [U01-04] Booléen faux → 0
+(: faux ù)
+(€ faux)
+
+§§ [U01-05] Réassignation d'une variable existante
+(: x 100)
+(€ x)
+
+§§ [U01-06] Booléen faux stocké dans variable
+(: b_false ù)
+(€ b_false)
+
+§§ [U01-07] Booléen vrai stocké dans variable → 1
+(: b_true µ)
+(€ b_true)

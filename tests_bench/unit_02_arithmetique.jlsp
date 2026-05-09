@@ -1,0 +1,38 @@
+§§ =============================================================
+§§ UNIT_02 — Arithmétique
+§§ Résultats attendus dans l'ordre :
+§§   30  10  200  2  7  110  1  0  1  0
+§§ =============================================================
+
+(: a 20)
+(: b 10)
+
+§§ [U02-01] Addition simple → 30
+(€ (+ a b))
+
+§§ [U02-02] Soustraction simple → 10
+(€ (- a b))
+
+§§ [U02-03] Multiplication simple → 200
+(€ (* a b))
+
+§§ [U02-04] Division entière → 2
+(€ (/ a b))
+
+§§ [U02-05] Opérations imbriquées → (20-10) - (20/10-1) = 10 - 1 - 2 = 7
+(€ (- (- a b) (- (/ a b) 1)))
+
+§§ [U02-06] Addition N-aire → 1+2+3+4+100 = 110
+(€ (+ 1 2 3 4 100))
+
+§§ [U02-07] Comparaison > vraie → 1
+(€ (> a b))
+
+§§ [U02-08] Comparaison > fausse → 0
+(€ (> b a))
+
+§§ [U02-09] Comparaison = vraie → 1
+(€ (= a 20))
+
+§§ [U02-10] Comparaison = fausse → 0
+(€ (= a 99))

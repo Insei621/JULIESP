@@ -1,0 +1,36 @@
+§§ =============================================================
+§§ UNIT_06 — Listes (cons, car, cdr, null?, atom?)
+§§ Résultats attendus dans l'ordre :
+§§   1  2  3  1  0  1  0  1  0
+§§ =============================================================
+
+§§ Construction de la liste (1 2 3)
+(: lst (& 1 (& 2 (& 3 ²()))))
+
+§§ [U06-01] car → premier élément → 1
+(€ (<< lst))
+
+§§ [U06-02] car(cdr) → deuxième élément → 2
+(€ (<< (>> lst)))
+
+§§ [U06-03] car(cdr(cdr)) → troisième élément → 3
+(€ (<< (>> (>> lst))))
+
+§§ [U06-04] null? sur liste non vide → 0
+(€ (| lst))
+
+§§ [U06-05] null? sur liste vide ²() → 1
+(€ (| ²()))
+
+§§ [U06-06] atom? sur entier → 1
+(€ (@ 42))
+
+§§ [U06-07] atom? sur liste → 0
+(€ (@ lst))
+
+§§ [U06-08] null? sur cdr(cdr(cdr)) — fin de liste → 1
+(€ (| (>> (>> (>> lst)))))
+
+§§ [U06-09] cons d'une liste avec une autre
+(: lst2 (& 10 (& 20 ²())))
+(€ (| lst2))

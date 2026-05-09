@@ -1,0 +1,29 @@
+§§ =============================================================
+§§ UNIT_08 — Scopes et variables globales
+§§ Résultats attendus dans l'ordre :
+§§   150  200  10  60
+§§ =============================================================
+
+§§ [U08-01] Fonction accédant à une variable globale
+(: facteur 10)
+(: multiplier (£ (n) (* n facteur)))
+(€ (multiplier 15))
+
+§§ [U08-02] Modification du global puis réutilisation
+(: facteur 20)
+(€ (multiplier 10))
+
+§§ [U08-03] Variable locale masque le global
+(: x 10)
+(: shadow_test (£ (x) (€ x)))
+(shadow_test 10)
+
+§§ [U08-04] Fonction avec plusieurs variables locales
+(: calcul_complexe (£ (base)
+    (;
+        (: a (* base 2))
+        (: b (+ a base))
+        (: c (* b 2))
+        (€ c))))
+
+(calcul_complexe 10)

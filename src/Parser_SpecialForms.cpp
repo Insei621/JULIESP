@@ -124,26 +124,28 @@ ASTNode* Parser::parseLoad() {
     int c = showNext().cursor;
 
     expect(TokenType::CORE_LOAD);
-
-    Token pathTok = showNext();          // ← capture avant
-    expect(TokenType::LIT_STRING);       // ← puis consomme
+    Token pathTok = showNext();
+    expect(TokenType::LIT_STRING);
     expect(TokenType::DEL_RBRACE);
 
-    // Lire le fichier
-    std::string content = readFile(pathTok.value);
+    // Résout le chemin relativement au fichier source
+    std::string filePath = pathTok.value;
+    if (!sourceDir_.empty() && filePath[0] != '/') {
+        filePath = sourceDir_ + "/" + filePath;
+    }
 
-    // Lexer + Parser sur le contenu du fichier
+    std::string content = readFile(filePath);
+
     Lexer subLexer(content);
     std::vector<Token> subTokens = subLexer.tokenize();
-    Parser subParser(subTokens);
+    // Passe le même sourceDir_ au sous-parser
+    Parser subParser(subTokens, sourceDir_);
     std::vector<ASTNode*> externalNodes = subParser.parseProgram();
 
-    // Crée un nœud progn qui contient tout le fichier chargé
     SExpr* loadedContent = new SExpr(l, c, false);
     loadedContent->add(new Primitive("progn", l, c, false));
-    for (ASTNode* node : externalNodes) {
+    for (ASTNode* node : externalNodes)
         loadedContent->add(node);
-    }
 
     return loadedContent;
 }
