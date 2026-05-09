@@ -28,6 +28,7 @@ install: all
 	@echo ""
 	@sudo $(MAKE) -C build install --no-print-directory
 	@sudo mandb > /dev/null 2>&1
+	@chmod +x tests_bench/run_tests.sh
 	@echo ""
 	@echo "  OK — juliesp installé avec succès !"
 	@echo ""

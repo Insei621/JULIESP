@@ -1,6 +1,6 @@
-# JulieSP
+# JULIESP
 
-Compilateur pour le langage **JulieSP**, un dialecte Lisp qui compile vers C.
+Compilateur pour le langage **Juliesp**, un dialecte Lisp qui compile vers C.
 
 ---
 
@@ -58,7 +58,7 @@ juliesp <fichier.jlsp> [options]
 |-------|------|-------------|
 | `-dl` | `--dump-lex` | Affiche les tokens (analyse lexicale) |
 | `-da` | `--dump-ast` | Affiche l'AST dans le terminal |
-| `-di` | `--dump-imgast` | Génère `AST_Graphe/ast.png` via Graphviz |
+| `-di` | `--dump-imgast` | Génère `ast.png` dans le dossier de sortie via Graphviz |
 | `-dr` | `--dump-ir` | Affiche la représentation intermédiaire |
 
 ### Options de pipeline
@@ -203,7 +203,6 @@ Le dossier `tests_bench/` contient une suite de tests unitaires couvrant toutes 
 
 ```bash
 cd tests_bench
-chmod +x run_tests.sh
 ./run_tests.sh
 ```
 

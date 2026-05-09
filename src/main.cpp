@@ -190,17 +190,26 @@ int main(int argc, char** argv) {
     }
 
     if (dumpImgAst) {
-        std::filesystem::create_directories("AST_Graphe");
-        std::ofstream dotFile("AST_Graphe/ast.dot");
+        // Place l'image dans le même dossier que le fichier de sortie
+        auto outDir = std::filesystem::path(outputFile).parent_path();
+        if (outDir.empty()) outDir = ".";
+        std::filesystem::create_directories(outDir);
+
+        std::string dotPath = (outDir / "ast.dot").string();
+        std::string pngPath = (outDir / "ast.png").string();
+
+        std::ofstream dotFile(dotPath);
         dotFile << "digraph G {\n";
         GraphvizVisitor gv(dotFile);
         root->accept(&gv);
         dotFile << "}\n";
         dotFile.close();
-        int dotRet = system("dot -Tpng AST_Graphe/ast.dot -o AST_Graphe/ast.png");
+
+        std::string cmd = "dot -Tpng \"" + dotPath + "\" -o \"" + pngPath + "\"";
+        int dotRet = system(cmd.c_str());
         if (dotRet != 0)
             std::cerr << "\033[1;33m[Attention]\033[0m graphviz a échoué — est-il installé ?\n";
-        std::cout << "\033[1;32m[juliesp]\033[0m Image AST : AST_Graphe/ast.png\n";
+        std::cout << "\033[1;32m[juliesp]\033[0m Image AST : " << pngPath << "\n";
     }
 
     if (parseOnly) return 0;
