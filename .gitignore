@@ -1,0 +1,13 @@
+# Code généré par juliesp
+output/
+
+# Build CMake
+cmake-build-debug/
+cmake-build-release/
+
+# Graphes AST générés
+AST_Graphe/
+
+# Fichiers objets
+*.o
+*.d
