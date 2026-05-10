@@ -24,6 +24,13 @@ public:
 
     // Affiche l'IR
     static void dumpIR(IRGenerator& irGen, const IRProgram& ir);
+
+    // Messages de progression
+    static void logStart(const std::string& etape);
+    static void logSuccess(const std::string& message);
+    static void logInfo(const std::string& message);
+    static void logWarning(const std::string& message);
+    static void logError(const std::string& message);
 };
 
 #endif //JULIESP_DEBUGPRINTER_H

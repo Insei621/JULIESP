@@ -24,6 +24,7 @@
 #include <unordered_set>
 #include <queue>
 #include <unordered_set>
+#include <cstring>
 using namespace std;
 
 #ifndef COMPILATEUR_JULIESP_PCH_H

@@ -46,3 +46,23 @@ void DebugPrinter::dumpIR(IRGenerator& irGen, const IRProgram& ir) {
     irGen.dumpIR(ir);
     std::cout << "\n";
 }
+
+void DebugPrinter::logStart(const std::string& etape) {
+    std::cout << "\033[1;34m[" << etape << "]\033[0m Lancement de l'analyse...\n";
+}
+
+void DebugPrinter::logSuccess(const std::string& message) {
+    std::cout << "\033[1;32m[Succès]\033[0m " << message << "\n";
+}
+
+void DebugPrinter::logInfo(const std::string& message) {
+    std::cout << "\033[1;34m[juliesp]\033[0m " << message << "\n";
+}
+
+void DebugPrinter::logWarning(const std::string& message) {
+    std::cerr << "\033[1;33m[Attention]\033[0m " << message << "\n";
+}
+
+void DebugPrinter::logError(const std::string& message) {
+    std::cerr << "\033[1;31m[Erreur]\033[0m " << message << "\n";
+}

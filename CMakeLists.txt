@@ -25,6 +25,8 @@ add_executable(juliesp
     src/CGenerator.cpp
         src/DebugPrinter.cpp
         include/DebugPrinter.h
+        src/CompilerConfig.cpp
+        include/CompilerConfig.h
 )
 
 # =============================================================================
