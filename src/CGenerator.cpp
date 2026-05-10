@@ -487,15 +487,13 @@ std::string CGenerator::irTypeToC(IRType type) {
         case IRType::INT:
         case IRType::LIST:
         case IRType::BOOL:
+        case IRType::STRING:
             // L'entier, la liste et le booléen Lisp partagent le même conteneur.
             // Le type 'lisp_obj' est défini dans ton runtime comme un intptr_t.
             return "lisp_obj";
 
         case IRType::FLOAT:
             return "float";
-
-        case IRType::STRING:
-            return "char*";
 
         case IRType::VOID:
             return "void";
