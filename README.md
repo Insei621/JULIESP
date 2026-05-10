@@ -26,6 +26,11 @@ git clone https://github.com/Insei621/juliesp
 cd juliesp
 sudo make install
 ```
+**Attention** : si vous exécutez dans Docker, le sudo n'est pas disponible, faites d'abord:
+```bash
+cd build/juliesp
+make install
+```
 
 Après l'installation, `juliesp` est accessible depuis n'importe où dans le terminal.
 

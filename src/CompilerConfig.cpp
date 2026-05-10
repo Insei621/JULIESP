@@ -61,6 +61,13 @@ bool CompilerConfig::parse(int argc, char** argv, CompilerConfig& cfg) {
 
     cfg.sourceFile = argv[1];
 
+    // Vérifie l'extension
+    if (cfg.sourceFile.size() < 5 ||
+        cfg.sourceFile.substr(cfg.sourceFile.size() - 5) != ".jlsp") {
+        DebugPrinter::logError("Le fichier doit avoir l'extension .jlsp : " + cfg.sourceFile);
+        return false;
+        }
+
     for (int i = 2; i < argc; ++i) {
         std::string arg = argv[i];
 
