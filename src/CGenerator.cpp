@@ -408,13 +408,12 @@ void CGenerator::emitInstruction(const IRInstruction& instr, std::ostream& out, 
     // --- IR_Scan : scanf(format, &dest); ---
     if (std::holds_alternative<IR_Scan>(instr)) {
         const auto& s = std::get<IR_Scan>(instr);
-        out << indent(indentLevel) << "scanf(\"" << printfFormat(s.type) << "\", ";
-        if (s.type == IRType::STRING) {
-            out << s.dest;
-        } else {
-            out << "&" << s.dest;
-        }
-        out << ");\n";
+        // Variable temporaire pour lire la valeur brute
+        out << indent(indentLevel) << "{\n";
+        out << indent(indentLevel) << "    int _tmp;\n";
+        out << indent(indentLevel) << "    scanf(\"%d\", &_tmp);\n";
+        out << indent(indentLevel) << "    " << s.dest << " = ENCODE_INT(_tmp);\n";
+        out << indent(indentLevel) << "}\n";
         return;
     }
 

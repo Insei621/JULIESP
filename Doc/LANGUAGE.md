@@ -218,9 +218,10 @@ Les listes sont des listes chaînées construites avec `&`. Elles peuvent conten
 ### Fonctions
 
 - **Pas de fonctions d'ordre supérieur** — impossible de passer une fonction comme argument d'une autre fonction
-- **Pas de closures** — les lambdas n'capturent pas leur environnement
+- **Pas de closures** — les lambdas ne capturent pas leur environnement
 - **Lambdas anonymes** — une lambda non assignée à une variable retourne NIL
 - **Pas de types de retour déclarés** — toutes les fonctions retournent `lisp_obj`
+- - **Pas de `let`** — impossible à implémenter sans closures et fonctions d'ordre supérieur
 
 ### Entrées/Sorties
 
