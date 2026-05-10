@@ -1,15 +1,14 @@
 //
-// main.cpp — Point d'entrée du compilateur JuliesSP
+// main.cpp — Point d'entrée du compilateur JULIESP
 //
 
 #include "../include/pch.h"
 #include "../include/Lexer.h"
 #include "../include/Parser.h"
-#include "../include/PrettyPrinter.h"
-#include "../include/GraphvizVisitor.h"
 #include "../include/SemanticAnalyzer.h"
 #include "../include/IRGenerator.h"
 #include "../include/CGenerator.h"
+#include "../include/DebugPrinter.h"
 
 #include <iostream>
 #include <fstream>
@@ -24,7 +23,7 @@
 
 void printHelp(const char* progName) {
     std::cout << "\n";
-    std::cout << "  juliesp — Compilateur du langage JuliesSP\n";
+    std::cout << "  juliesp — Compilateur du langage JULIESP\n";
     std::cout << "\n";
     std::cout << "Usage:\n";
     std::cout << "  " << progName << " <fichier.jlsp> [options]\n";
@@ -32,11 +31,14 @@ void printHelp(const char* progName) {
     std::cout << "Options de sortie:\n";
     std::cout << "  -o, --output <fichier.c>   Fichier de sortie C (défaut: output/output.c)\n";
     std::cout << "  -c, --compile              Compile le C généré avec gcc\n";
+    std::cout << "  -b, --binary <nom>         Nom du binaire exécutable (défaut: même nom que -o sans .c)\n";
+    std::cout << "  -r, --run                  Exécute le binaire après compilation (implique -c)\n";
     std::cout << "\n";
     std::cout << "Options de debug:\n";
+    std::cout << "  -d,  --debug               Active tous les dumps (-dl -da -di -dr)\n";
     std::cout << "  -dl, --dump-lex            Affiche les tokens\n";
     std::cout << "  -da, --dump-ast            Affiche l'AST dans le terminal\n";
-    std::cout << "  -di, --dump-imgast         Génère AST_Graphe/ast.png\n";
+    std::cout << "  -di, --dump-imgast         Génère ast.png dans le dossier de sortie\n";
     std::cout << "  -dr, --dump-ir             Affiche la représentation intermédiaire\n";
     std::cout << "\n";
     std::cout << "Options de pipeline:\n";
@@ -49,10 +51,12 @@ void printHelp(const char* progName) {
     std::cout << "\n";
     std::cout << "Exemples:\n";
     std::cout << "  " << progName << " programme.jlsp\n";
-    std::cout << "  " << progName << " programme.jlsp -o mon_prog.c\n";
     std::cout << "  " << progName << " programme.jlsp -c\n";
+    std::cout << "  " << progName << " programme.jlsp -c -b mon_programme\n";
+    std::cout << "  " << progName << " programme.jlsp -r\n";
+    std::cout << "  " << progName << " programme.jlsp -o mon_prog.c -b mon_prog -r\n";
+    std::cout << "  " << progName << " programme.jlsp -d\n";
     std::cout << "  " << progName << " programme.jlsp -da -dr\n";
-    std::cout << "  " << progName << " programme.jlsp -di\n";
     std::cout << "\n";
 }
 
@@ -92,6 +96,7 @@ int main(int argc, char** argv) {
     // --- Parsing des arguments ---
     std::string sourceFile  = argv[1];
     std::string outputFile  = "output/output.c";
+    std::string binaryName  = "";  // vide = dérivé du outputFile
     bool dumpLex       = false;
     bool dumpAst       = false;
     bool dumpImgAst    = false;
@@ -101,6 +106,7 @@ int main(int argc, char** argv) {
     bool semOnly       = false;
     bool irOnly        = false;
     bool compileOutput = false;
+    bool runOutput     = false;
 
     for (int i = 2; i < argc; ++i) {
         std::string arg = argv[i];
@@ -114,9 +120,24 @@ int main(int argc, char** argv) {
             }
             outputFile = argv[++i];
         }
-        else if (arg == "-c"  || arg == "--compile")     compileOutput = true;
+        else if (arg == "-b" || arg == "--binary") {
+            if (i + 1 >= argc) {
+                std::cerr << "\033[1;31m[Erreur]\033[0m "
+                          << arg << " attend un nom de binaire.\n";
+                return 2;
+            }
+            binaryName = argv[++i];
+        }
+        else if (arg == "-c" || arg == "--compile")      compileOutput = true;
+        else if (arg == "-r" || arg == "--run") {
+            runOutput     = true;
+            compileOutput = true;  // -r implique -c
+        }
 
         // Debug
+        else if (arg == "-d"  || arg == "--debug") {
+            dumpLex = dumpAst = dumpImgAst = dumpIR = true;
+        }
         else if (arg == "-dl" || arg == "--dump-lex")    dumpLex       = true;
         else if (arg == "-da" || arg == "--dump-ast")    dumpAst       = true;
         else if (arg == "-di" || arg == "--dump-imgast") dumpImgAst    = true;
@@ -147,13 +168,12 @@ int main(int argc, char** argv) {
     // ÉTAPE 2 : Analyse lexicale
     // ==========================================================================
 
+    std::cout << "\033[1;34m[Lexage]\033[0m Lancement de l'analyse...\n";
     Lexer lexer(source);
     std::vector<Token> tokens = lexer.tokenize();
     std::cout << "\033[1;32m[Succès]\033[0m Analyse lexicale terminée.\n";
 
-    if (dumpLex) {
-        lexer.afficherTokens(tokens);
-    }
+    if (dumpLex) DebugPrinter::dumpLex(lexer, tokens);
 
     if (lexOnly) return 0;
 
@@ -165,6 +185,7 @@ int main(int argc, char** argv) {
                             .parent_path()
                             .string();
 
+    std::cout << "\033[1;34m[Parsing]\033[0m Lancement de l'analyse...\n";
     Parser parser(tokens, sourceDir);
     ASTNode* root = nullptr;
 
@@ -182,35 +203,8 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    if (dumpAst) {
-        std::cout << "\n=== DUMP AST ===\n";
-        PrettyPrinter printer;
-        root->accept(&printer);
-        std::cout << "\n";
-    }
-
-    if (dumpImgAst) {
-        // Place l'image dans le même dossier que le fichier de sortie
-        auto outDir = std::filesystem::path(outputFile).parent_path();
-        if (outDir.empty()) outDir = ".";
-        std::filesystem::create_directories(outDir);
-
-        std::string dotPath = (outDir / "ast.dot").string();
-        std::string pngPath = (outDir / "ast.png").string();
-
-        std::ofstream dotFile(dotPath);
-        dotFile << "digraph G {\n";
-        GraphvizVisitor gv(dotFile);
-        root->accept(&gv);
-        dotFile << "}\n";
-        dotFile.close();
-
-        std::string cmd = "dot -Tpng \"" + dotPath + "\" -o \"" + pngPath + "\"";
-        int dotRet = system(cmd.c_str());
-        if (dotRet != 0)
-            std::cerr << "\033[1;33m[Attention]\033[0m graphviz a échoué — est-il installé ?\n";
-        std::cout << "\033[1;32m[juliesp]\033[0m Image AST : " << pngPath << "\n";
-    }
+    if (dumpAst)    DebugPrinter::dumpAst(root);
+    if (dumpImgAst) DebugPrinter::dumpImgAst(root, outputFile);
 
     if (parseOnly) return 0;
 
@@ -218,6 +212,7 @@ int main(int argc, char** argv) {
     // ÉTAPE 4 : Analyse sémantique
     // ==========================================================================
 
+    std::cout << "\033[1;34m[Sémantique]\033[0m Lancement de l'analyse...\n";
     SemanticAnalyzer semantic;
     try {
         semantic.analyze(root);
@@ -233,14 +228,12 @@ int main(int argc, char** argv) {
     // ÉTAPE 5 : Génération IR
     // ==========================================================================
 
+    std::cout << "\033[1;34m[IR]\033[0m Génération de la représentation intermédiaire...\n";
     IRGenerator irGen;
     IRProgram ir = irGen.generate(root);
+    std::cout << "\033[1;32m[Succès]\033[0m IR générée.\n";
 
-    if (dumpIR) {
-        std::cout << "\n";
-        irGen.dumpIR(ir);
-        std::cout << "\n";
-    }
+    if (dumpIR) DebugPrinter::dumpIR(irGen, ir);
 
     if (irOnly) return 0;
 
@@ -248,6 +241,7 @@ int main(int argc, char** argv) {
     // ÉTAPE 6 : Génération C
     // ==========================================================================
 
+    std::cout << "\033[1;34m[CGen]\033[0m Génération du code C...\n";
     try {
         auto outPath = std::filesystem::path(outputFile);
         if (outPath.has_parent_path())
@@ -266,9 +260,17 @@ int main(int argc, char** argv) {
     // ==========================================================================
 
     if (compileOutput) {
-        std::string binFile = outputFile;
-        if (binFile.size() > 2 && binFile.substr(binFile.size() - 2) == ".c")
-            binFile = binFile.substr(0, binFile.size() - 2);
+        // Détermine le nom du binaire
+        std::string binFile;
+        if (!binaryName.empty()) {
+            // -b fourni explicitement
+            binFile = binaryName;
+        } else {
+            // Dérive du outputFile : retire .c
+            binFile = outputFile;
+            if (binFile.size() > 2 && binFile.substr(binFile.size() - 2) == ".c")
+                binFile = binFile.substr(0, binFile.size() - 2);
+        }
 
         std::string cmd = "gcc \"" + outputFile + "\" -o \"" + binFile
                         + "\" -I/usr/local/include 2>&1";
@@ -281,6 +283,20 @@ int main(int argc, char** argv) {
             return 1;
         }
         std::cout << "\033[1;32m[juliesp]\033[0m Binaire généré : " << binFile << "\n";
+
+        // ==========================================================================
+        // ÉTAPE 8 (optionnelle) : Exécution du binaire
+        // ==========================================================================
+
+        if (runOutput) {
+            std::cout << "\033[1;34m[juliesp]\033[0m Exécution de : " << binFile << "\n";
+            std::cout << std::string(40, '-') << "\n";
+            int runRet = system(("\"" + binFile + "\"").c_str());
+            std::cout << std::string(40, '-') << "\n";
+            if (runRet != 0)
+                std::cerr << "\033[1;33m[Attention]\033[0m Le programme s'est terminé avec le code " 
+                          << runRet << "\n";
+        }
     }
 
     delete root;

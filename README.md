@@ -18,8 +18,9 @@ Sur Ubuntu/Debian :
 sudo apt install cmake g++ gcc graphviz
 ```
 
-### Installer Juliesp
+### Installer JULIESP
 
+Collez les commandes suivantes dans un terminal bash et le compilateur sera installé sur votre machine.
 ```bash
 git clone https://github.com/Insei621/juliesp
 cd juliesp
@@ -51,11 +52,14 @@ juliesp <fichier.jlsp> [options]
 |-------|------|-------------|
 | `-o <fichier.c>` | `--output <fichier.c>` | Fichier de sortie C (défaut: `output/output.c`) |
 | `-c` | `--compile` | Compile le C généré avec gcc en un binaire exécutable |
+| `-b <nom>` | `--binary <nom>` | Nom du binaire exécutable (défaut: nom du fichier C sans `.c`) |
+| `-r` | `--run` | Exécute le binaire après compilation (implique `-c`) |
 
 ### Options de debug
 
 | Court | Long | Description |
 |-------|------|-------------|
+| `-d` | `--debug` | Active tous les dumps (`-dl -da -di -dr`) |
 | `-dl` | `--dump-lex` | Affiche les tokens (analyse lexicale) |
 | `-da` | `--dump-ast` | Affiche l'AST dans le terminal |
 | `-di` | `--dump-imgast` | Génère `ast.png` dans le dossier de sortie via Graphviz |
@@ -83,8 +87,17 @@ juliesp programme.jlsp -o mon_prog.c
 # Compiler vers C puis produire un binaire exécutable
 juliesp programme.jlsp -c
 
-# Compiler vers un fichier spécifique et produire un binaire
-juliesp programme.jlsp -o mon_prog.c -c
+# Compiler avec un nom de binaire spécifique
+juliesp programme.jlsp -c -b mon_programme
+
+# Compiler et exécuter directement
+juliesp programme.jlsp -r
+
+# Compiler, nommer le binaire et exécuter
+juliesp programme.jlsp -o mon_prog.c -b mon_prog -r
+
+# Activer tous les dumps d'un coup
+juliesp programme.jlsp -d
 
 # Afficher les tokens et l'IR
 juliesp programme.jlsp -dl -dr

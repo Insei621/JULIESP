@@ -23,6 +23,8 @@ add_executable(juliesp
     src/SemanticAnalyzer.cpp
     src/IRGenerator.cpp
     src/CGenerator.cpp
+        src/DebugPrinter.cpp
+        include/DebugPrinter.h
 )
 
 # =============================================================================

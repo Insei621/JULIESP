@@ -32,7 +32,23 @@ Compile automatiquement le fichier C généré avec gcc pour produire
 un binaire exécutable. Le binaire prend le même nom que le fichier C
 sans l'extension.
 
+.TP
+.BR \-b " " \fInom\fR ", " \-\-binary " " \fInom\fR
+Spécifie le nom du binaire exécutable produit par gcc.
+Par défaut, le binaire prend le même nom que le fichier C sans l'extension.
+
+.TP
+.BR \-r ", " \-\-run
+Exécute le binaire produit par gcc après compilation.
+Implique automatiquement
+.BR \-c .
+
 .SS Options de debug
+
+.TP
+.BR \-d ", " \-\-debug
+Active tous les dumps en une seule option (équivalent à
+.BR \-dl\ \-da\ \-di\ \-dr ).
 
 .TP
 .BR \-dl ", " \-\-dump\-lex
@@ -95,6 +111,24 @@ Compiler vers C puis produire un binaire exécutable :
 .PP
 .RS
 .B juliesp programme.jlsp \-c
+.RE
+
+Compiler avec un nom de binaire spécifique :
+.PP
+.RS
+.B juliesp programme.jlsp \-c \-b mon_programme
+.RE
+
+Compiler et exécuter directement :
+.PP
+.RS
+.B juliesp programme.jlsp \-r
+.RE
+
+Activer tous les dumps d'un coup :
+.PP
+.RS
+.B juliesp programme.jlsp \-d
 .RE
 
 Afficher les tokens et l'IR :
