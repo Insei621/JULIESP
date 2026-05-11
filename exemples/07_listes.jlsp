@@ -1,0 +1,29 @@
+§§ =============================================================
+§§ 07_listes.jlsp — Manipulation de listes
+§§ Compile : juliesp 07_listes.jlsp -r
+§§ =============================================================
+
+§§ Création d'une liste
+(: lst (& 10 (& 20 (& 30 (& 40 (& 50 ²()))))))
+
+§§ Accès aux éléments
+(€ "Premier element :") (€ (<< lst))              §§ → 10
+(€ "Deuxieme element :") (€ (<< (>> lst)))        §§ → 20
+(€ "Troisieme element :") (€ (<< (>> (>> lst))))  §§ → 30
+
+§§ Tests sur les listes
+(€ "Liste vide ? (0=non) :") (€ (| lst))          §§ → 0
+(€ "Liste vide vide ? (1=oui) :") (€ (| ²()))     §§ → 1
+(€ "10 est un atome ? (1=oui) :") (€ (@ 10))      §§ → 1
+(€ "lst est un atome ? (0=non) :") (€ (@ lst))    §§ → 0
+
+§§ Construction progressive d'une liste
+(: vide ²())
+(: lst2 (& 1 vide))
+(: lst3 (& 2 lst2))
+(: lst4 (& 3 lst3))
+(€ "Tete de lst4 :") (€ (<< lst4))                §§ → 3
+
+§§ Liste avec strings
+(: mots (& "bonjour" (& "monde" ²())))
+(€ "Premier mot :") (€ (<< mots))                 §§ → bonjour

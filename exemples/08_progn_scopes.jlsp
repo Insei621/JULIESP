@@ -1,0 +1,41 @@
+§§ =============================================================
+§§ 08_progn_scopes.jlsp — Séquences et portée des variables
+§§ Compile : juliesp 08_progn_scopes.jlsp -r
+§§ =============================================================
+
+§§ Progn — exécution séquentielle
+(;
+    (€ "Etape 1")
+    (€ "Etape 2")
+    (€ "Etape 3"))
+
+§§ Progn avec variables locales
+(;
+    (: x 10)
+    (: y (* x 2))
+    (: z (+ x y))
+    (€ "x =") (€ x)     §§ → 10
+    (€ "y =") (€ y)     §§ → 20
+    (€ "z =") (€ z))    §§ → 30
+
+§§ Variable globale accessible depuis une fonction
+(: base 100)
+
+(: calculer (£ (n)
+    (;
+        (: local (* n 2))
+        (€ "Local (n*2) :") (€ local)
+        (€ "Global (base) :") (€ base)
+        (+ local base))))
+
+(: resultat (calculer 5))
+(€ "Resultat :") (€ resultat)   §§ → 110
+
+§§ Progn dans une condition
+(: score 85)
+(? (> score 80)
+    (;
+        (€ "Bravo !")
+        (€ "Score superieur a 80")
+        (€ score))
+    (€ "Score insuffisant"))

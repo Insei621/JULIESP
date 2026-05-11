@@ -1,0 +1,30 @@
+§§ =============================================================
+§§ 02_variables.jlsp — Variables et types de base
+§§ Compile : juliesp 02_variables.jlsp -r
+§§ =============================================================
+
+§§ Entiers
+(: age 20)
+(: annee 2026)
+(€ "Age :")
+(€ age)
+(€ "Annee :")
+(€ annee)
+
+§§ Booléens
+(: est_majeur µ)
+(: est_mineur ù)
+(€ "Est majeur (1=vrai) :")
+(€ est_majeur)
+(€ "Est mineur (0=faux) :")
+(€ est_mineur)
+
+§§ Chaînes de caractères
+(: nom "Alice")
+(€ "Nom :")
+(€ nom)
+
+§§ Réassignation
+(: age 21)
+(€ "Nouvel age :")
+(€ age)

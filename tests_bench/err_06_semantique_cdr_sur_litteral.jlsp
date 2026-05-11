@@ -1,0 +1,4 @@
+§§ ERR_06 — cdr (>>) sur un littéral numérique
+§§ Résultat attendu : [Erreur Sémantique] 'cdr' attend une liste
+
+(>> 42)

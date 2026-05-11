@@ -1,0 +1,7 @@
+§§ ERR_09 — Variable locale utilisée hors de son scope
+§§ Résultat attendu : [Erreur Sémantique] Le symbole 'b' n'est pas défini
+
+(: f (£ (x)
+    (: b (* x 2))))
+
+(€ b)

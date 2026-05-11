@@ -1,0 +1,42 @@
+§§ =============================================================
+§§ 09_calculatrice.jlsp — Programme complet : calculatrice
+§§ Compile : juliesp 09_calculatrice.jlsp -r
+§§ =============================================================
+
+§§ Fonctions de base
+(: additionner     (£ (a b) (+ a b)))
+(: soustraire      (£ (a b) (- a b)))
+(: multiplier      (£ (a b) (* a b)))
+(: diviser         (£ (a b) (/ a b)))
+
+§§ Saisie des deux opérandes
+(€ "=== Calculatrice JULIESP ===")
+(€ "")
+
+(: a 0)
+(: b 0)
+
+(€ "Entrez a :")
+(ç a)
+
+(€ "Entrez b :")
+(ç b)
+
+§§ Affichage des résultats
+(€ "")
+(€ "--- Resultats ---")
+
+(€ "Addition :")
+(€ (additionner a b))
+
+(€ "Soustraction :")
+(€ (soustraire a b))
+
+(€ "Multiplication :")
+(€ (multiplier a b))
+
+(? (= b 0)
+    (€ "Division : impossible (division par zero)")
+    (;
+        (€ "Division entiere :")
+        (€ (diviser a b))))

@@ -1,0 +1,4 @@
+§§ ERR_03 — setq sans valeur
+§§ Résultat attendu : [Erreur Syntaxique]
+
+(: x)

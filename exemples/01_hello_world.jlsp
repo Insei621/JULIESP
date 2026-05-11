@@ -1,0 +1,6 @@
+§§ =============================================================
+§§ hello_world.jlsp — Premier programme en JULIESP
+§§ Compile : juliesp hello_world.jlsp -r
+§§ =============================================================
+
+(€ "Bonjour, monde !")

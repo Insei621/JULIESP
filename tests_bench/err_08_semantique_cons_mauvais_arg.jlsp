@@ -1,0 +1,4 @@
+§§ ERR_08 — cons (&) avec un entier comme 2ème argument
+§§ Résultat attendu : [Erreur Sémantique] '&' attend une liste comme 2ème argument
+
+(& 1 42)

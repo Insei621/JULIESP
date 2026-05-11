@@ -1,0 +1,4 @@
+§§ ERR_10 — Fichier à charger introuvable
+§§ Résultat attendu : Impossible de trouver le fichier
+
+($ "fichier_inexistant.jlsp")

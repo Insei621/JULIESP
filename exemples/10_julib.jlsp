@@ -1,0 +1,48 @@
+§§ =============================================================
+§§ 10_julib.jlsp — Utilisation de la bibliothèque standard
+§§ Compile : juliesp 10_julib.jlsp -r
+§§ =============================================================
+
+($ "lib/julib.jlsp")
+
+§§ --- Arithmétique ---
+(€ "=== Arithmetique ===")
+
+(€ "abs(-42) :") (€ (abs -42))             §§ → 42
+(€ "max2(10, 25) :") (€ (max2 10 25))      §§ → 25
+(€ "min2(10, 25) :") (€ (min2 10 25))      §§ → 10
+(€ "carre(7) :") (€ (carre 7))             §§ → 49
+(€ "cube(3) :") (€ (cube 3))               §§ → 27
+(€ "puissance(2,10) :") (€ (puissance 2 10)) §§ → 1024
+(€ "factorielle(6) :") (€ (factorielle 6)) §§ → 720
+(€ "fib(10) :") (€ (fib 10))               §§ → 55
+(€ "somme_n(100) :") (€ (somme_n 100))     §§ → 5050
+(€ "clamp(150,0,100) :") (€ (clamp 150 0 100)) §§ → 100
+(€ "pair(4) :") (€ (pair 4))               §§ → 1
+(€ "impair(7) :") (€ (impair 7))           §§ → 1
+
+§§ --- Logique ---
+(€ "")
+(€ "=== Logique ===")
+
+(€ "non(µ) :") (€ (non µ))                 §§ → 0
+(€ "et(µ,µ) :") (€ (et µ µ))              §§ → 1
+(€ "ou(µ,ù) :") (€ (ou µ ù))              §§ → 1
+(€ "xou(µ,µ) :") (€ (xou µ µ))            §§ → 0
+
+§§ --- Listes ---
+(€ "")
+(€ "=== Listes ===")
+
+(: lst (& 3 (& 1 (& 4 (& 1 (& 5 ²()))))))
+
+(€ "Liste : 3 1 4 1 5")
+(€ "longueur :") (€ (longueur lst))        §§ → 5
+(€ "deuxieme :") (€ (deuxieme lst))        §§ → 1
+(€ "dernier :") (€ (dernier lst))          §§ → 5
+(€ "max_liste :") (€ (max_liste lst))      §§ → 5
+(€ "min_liste :") (€ (min_liste lst))      §§ → 1
+(€ "somme_liste :") (€ (somme_liste lst))  §§ → 14
+(€ "contient 4 :") (€ (contient lst 4))   §§ → 1
+(€ "contient 9 :") (€ (contient lst 9))   §§ → 0
+(€ "nth(lst,2) :") (€ (nth lst 2))        §§ → 4

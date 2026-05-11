@@ -1,0 +1,4 @@
+§§ ERR_05 — car (<<) sur un littéral numérique
+§§ Résultat attendu : [Erreur Sémantique] 'car' attend une liste
+
+(<< 42)

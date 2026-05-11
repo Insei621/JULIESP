@@ -137,6 +137,7 @@ Elle contient la liste complète des options, la syntaxe du langage, les primiti
 |---------|---------|
 | [LANGUAGE.md](LANGUAGE.md) | Documentation technique complète — pipeline, tokens, grammaire, limitations, julib, runtime |
 | [LEXEME.md](LEXEME.md) | Référence rapide des tokens — imprimable |
+| [LEXEME_JULIB.md](LEXEME_JULIB.md) | Référence rapide des fonctions julib — imprimable |
 
 > Pour aller plus loin que ce README, consultez `LANGUAGE.md`.
  
@@ -281,9 +282,57 @@ Si `juliesp` n'est pas encore installé globalement :
 
 ---
 
+### Tests d'erreur
+
+Le dossier `tests_bench/` contient également une suite de tests vérifiant que le compilateur produit les bons messages d'erreur.
+
+```bash
+cd tests_bench
+chmod +x run_error_tests.sh
+./run_error_tests.sh
+```
+
+| Fichier | Erreur testée |
+|---------|---------------|
+| `err_01_lexer_caractere_inconnu` | Caractère non reconnu par le lexer |
+| `err_02_syntaxe_parenthese_manquante` | Parenthèse fermante manquante |
+| `err_03_syntaxe_setq_sans_valeur` | Assignation sans valeur |
+| `err_04_semantique_variable_non_definie` | Variable non définie |
+| `err_05_semantique_car_sur_litteral` | `<<` appliqué à un entier |
+| `err_06_semantique_cdr_sur_litteral` | `>>` appliqué à un entier |
+| `err_07_semantique_null_sur_litteral` | `\|` appliqué à un entier |
+| `err_08_semantique_cons_mauvais_arg` | `&` avec entier comme 2ème argument |
+| `err_09_semantique_variable_hors_scope` | Variable locale utilisée hors de son scope |
+| `err_10_load_fichier_introuvable` | Fichier `$` introuvable |
+
+---
+
+## Exemples
+
+Le dossier `examples/` contient des programmes JULIESP progressifs pour apprendre le langage.
+
+```bash
+juliesp examples/01_hello_world.jlsp -r
+```
+
+| Fichier | Concept illustré |
+|---------|-----------------|
+| `01_hello_world` | Premier programme |
+| `02_variables` | Types et assignations |
+| `03_arithmetique` | Opérations et comparaisons |
+| `04_conditions` | if/else, imbrications |
+| `05_fonctions` | Lambda, appels, composition |
+| `06_recursion` | Factorielle, Fibonacci, somme |
+| `07_listes` | cons, car, cdr, null?, atom? |
+| `08_progn_scopes` | Séquences et portée des variables |
+| `09_calculatrice` | Programme complet avec saisie utilisateur |
+| `10_julib` | Bibliothèque standard complète |
+
+---
+
 ## Bibliothèque standard — julib
 
-JULIESP inclut une bibliothèque standard `julib.jlsp` dans le dossier `lib/`.
+JULIESP inclut une bibliothèque standard `julib.jlsp` dans le dossier `lib/`. Pour la référence complète des fonctions, voir [LEXEME_JULIB.md](LEXEME_JULIB.md).
 
 ### Utilisation
 

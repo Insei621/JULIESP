@@ -1,0 +1,38 @@
+§§ =============================================================
+§§ 03_arithmetique.jlsp — Opérations arithmétiques
+§§ Compile : juliesp 03_arithmetique.jlsp -r
+§§ =============================================================
+
+(: a 15)
+(: b 4)
+
+§§ Opérations de base
+(€ "Addition :")
+(€ (+ a b))          §§ → 19
+
+(€ "Soustraction :")
+(€ (- a b))          §§ → 11
+
+(€ "Multiplication :")
+(€ (* a b))          §§ → 60
+
+(€ "Division entiere :")
+(€ (/ a b))          §§ → 3
+
+§§ Opérations imbriquées
+(€ "Expression complexe (a+b) * (a-b) :")
+(€ (* (+ a b) (- a b)))   §§ → 19 * 11 = 209
+
+§§ Addition N-aire
+(€ "Somme 1+2+3+4+5 :")
+(€ (+ 1 2 3 4 5))    §§ → 15
+
+§§ Comparaisons
+(€ "a > b (1=vrai) :")
+(€ (> a b))          §§ → 1
+
+(€ "a = 15 (1=vrai) :")
+(€ (= a 15))         §§ → 1
+
+(€ "a < b (0=faux) :")
+(€ (< a b))          §§ → 0

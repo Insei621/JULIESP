@@ -1,0 +1,33 @@
+§§ =============================================================
+§§ 06_recursion.jlsp — Fonctions récursives
+§§ Compile : juliesp 06_recursion.jlsp -r
+§§ =============================================================
+
+§§ Factorielle
+(: factorielle (£ (n)
+    (? (= n 0)
+        1
+        (* n (factorielle (- n 1))))))
+
+(€ "Factorielle de 0 :") (€ (factorielle 0))  §§ → 1
+(€ "Factorielle de 5 :") (€ (factorielle 5))  §§ → 120
+(€ "Factorielle de 7 :") (€ (factorielle 7))  §§ → 5040
+
+§§ Fibonacci
+(: fib (£ (n)
+    (? (< n 2)
+        n
+        (+ (fib (- n 1)) (fib (- n 2))))))
+
+(€ "Fibonacci de 0 :") (€ (fib 0))   §§ → 0
+(€ "Fibonacci de 1 :") (€ (fib 1))   §§ → 1
+(€ "Fibonacci de 10 :") (€ (fib 10)) §§ → 55
+
+§§ Somme récursive de 1 à n
+(: somme (£ (n)
+    (? (= n 0)
+        0
+        (+ n (somme (- n 1))))))
+
+(€ "Somme de 1 a 10 :") (€ (somme 10)) §§ → 55
+(€ "Somme de 1 a 100 :") (€ (somme 100)) §§ → 5050

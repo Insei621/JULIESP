@@ -1,0 +1,4 @@
+§§ ERR_04 — Variable non définie
+§§ Résultat attendu : [Erreur Sémantique] Le symbole 'inconnu' n'est pas défini
+
+(€ inconnu)

@@ -1,0 +1,35 @@
+§§ =============================================================
+§§ 05_fonctions.jlsp — Définition et appel de fonctions
+§§ Compile : juliesp 05_fonctions.jlsp -r
+§§ =============================================================
+
+§§ Fonction simple — carré d'un nombre
+(: carre (£ (n) (* n n)))
+(€ "Carre de 5 :")
+(€ (carre 5))            §§ → 25
+
+§§ Fonction à deux paramètres
+(: add (£ (a b) (+ a b)))
+(€ "3 + 7 =")
+(€ (add 3 7))            §§ → 10
+
+§§ Fonction avec condition
+(: valeur_absolue (£ (n)
+    (? (< n 0)
+        (- 0 n)
+        n)))
+(€ "Valeur absolue de -8 :")
+(€ (valeur_absolue -8))  §§ → 8
+
+§§ Composition de fonctions
+(: double (£ (n) (* n 2)))
+(: triple (£ (n) (* n 3)))
+(€ "Double puis triple de 4 :")
+(€ (triple (double 4)))  §§ → 24
+
+§§ Fonction accédant à une variable globale
+(: taux 10)
+(: appliquer_taux (£ (valeur)
+    (/ (* valeur taux) 100)))
+(€ "10% de 250 :")
+(€ (appliquer_taux 250)) §§ → 25

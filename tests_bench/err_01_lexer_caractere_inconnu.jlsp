@@ -1,0 +1,4 @@
+§§ ERR_01 — Caractère non reconnu par le lexer
+§§ Résultat attendu : [Erreur Lexicale] caractère '~' non reconnu
+
+~

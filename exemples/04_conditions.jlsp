@@ -1,0 +1,33 @@
+§§ =============================================================
+§§ 04_conditions.jlsp — Conditions et branchements
+§§ Compile : juliesp 04_conditions.jlsp -r
+§§ =============================================================
+
+(: x 42)
+
+§§ If simple avec else
+(? (> x 0)
+    (€ "x est positif")
+    (€ "x est negatif ou nul"))
+
+§§ If sans else
+(? (= x 42)
+    (€ "La reponse universelle !"))
+
+§§ If imbriqués — classification d'une note
+(: note 75)
+(? (> note 90)
+    (€ "Mention Tres Bien")
+    (? (> note 75)
+        (€ "Mention Bien")
+        (? (> note 60)
+            (€ "Mention Assez Bien")
+            (? (> note 50)
+                (€ "Passable")
+                (€ "Insuffisant")))))
+
+§§ Condition avec booléen
+(: connecte µ)
+(? connecte
+    (€ "Utilisateur connecte")
+    (€ "Utilisateur deconnecte"))

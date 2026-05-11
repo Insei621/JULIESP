@@ -1,0 +1,4 @@
+§§ ERR_07 — null? (|) sur un littéral numérique
+§§ Résultat attendu : [Erreur Sémantique] 'null' attend une liste
+
+(| 42)

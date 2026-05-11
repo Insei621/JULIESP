@@ -1,0 +1,4 @@
+§§ ERR_02 — Parenthèse fermante manquante
+§§ Résultat attendu : [Erreur Syntaxique]
+
+(: x 42
